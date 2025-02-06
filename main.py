@@ -88,6 +88,7 @@ def open_product_screen(selected_client_name):
     Label(input_frame, text="Valor para depositar:").pack(side=LEFT)
     valor_entry = Entry(input_frame)
     valor_entry.pack(side=LEFT, padx=5)
+    valor_entry.bind("<Return>", lambda event: add_value())
 
     add_value_button = Button(input_frame, text="Depositar", command=add_value)
     add_value_button.pack(side=LEFT)
@@ -128,26 +129,45 @@ def home():
     global search_query, listbox
     login.title("BarBilônia")
     login.geometry(f"{form_width}x{form_height}+{int(monitor_width-form_width/2)}+{int(monitor_height-form_height/2)}")
+    login.configure(background="#fff") # Define o fundo branco
+
+    icon_image = PhotoImage(file='icone/barbilonia.png').subsample(2, 2)
+
+    # Criar o Label para exibir o ícone (sem posicioná-lo ainda)
+    icon_label = Label(login, image=icon_image, background="#fff")
+    icon_label.image = icon_image
+
+    # Criar o Label "Buscar:" (sem posicioná-lo ainda)
+    search_label = Label(login, text="Buscar:", background="#fff", anchor=W)
 
     search_query = StringVar()
-
-    Label(login, text="Buscar:", background="#fff", anchor=W).place(x=form_width/5, y=form_height/5)
-
+    entry_width = 200  # Largura do campo de entrada
+    entry_x = form_width / 2 - entry_width / 2  # Centraliza a entry
     search_entry = Entry(login, textvariable=search_query)
-    search_entry.place(x=form_width/5+50, y=form_height/5+2, width=150)
+    search_entry.place(x=entry_x, y=form_height/5+2, width=entry_width)
+    search_entry.bind("<Return>", lambda event: search_names())
 
-    listbox = Listbox(login, width=30)
-    listbox.place(x=form_width/5, y=form_height/5 + 40)
+    total_width = icon_label.winfo_reqwidth() + search_label.winfo_reqwidth() + entry_width + 50 + 50
+    start_x = form_width / 2 - total_width / 2
+
+    icon_x = form_width / 2 - total_width / 2 + icon_image.width()/2 + 80
+    icon_label.place(x=icon_x, y=form_height / 5 - icon_image.height() - 5)
+
+    label_x = start_x + icon_label.winfo_reqwidth() + 50
+    search_label.place(x=label_x, y=form_height / 5)
+
+    listbox = Listbox(login, width=int(form_width/7), height=20)
+    listbox.place(x=30, y=form_height/5 + 40)
     for nome in names:
         listbox.insert(END, nome)
     listbox.bind("<<ListboxSelect>>", select_name)
 
-    # Buttons
-    search = Button(login, text="Buscar", bd='3', command=search_names)
-    search.place(x=form_width/5+210, y=form_height/5)
+    search_button = Button(login, text="Buscar", bd='3', command=search_names)
+    search_button.place(x=form_width/2 + entry_width/2 + 10, y=form_height/5)
 
     exit_button = Button(login, text="Sair", bd='3', command=login.destroy)
-    exit_button.place(x=form_width-35, y=form_height-30)
+    exit_x = form_width - exit_button.winfo_reqwidth() - 10
+    exit_button.place(x=exit_x, y=form_height - exit_button.winfo_reqheight() - 10)
 
     login.mainloop()
 
@@ -160,4 +180,5 @@ def load_csv():
             for row in reader:
                 client_values[row[0]] = float(row[1])
 
-home()
+if __name__ == "__main__":
+    home()
