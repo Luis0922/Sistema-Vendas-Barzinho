@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import messagebox
 import csv
 import os
+import datetime
 
 login = Tk()
 monitor_width = login.winfo_screenwidth()/2
@@ -32,7 +33,7 @@ def save_csv():
 def open_product_screen(selected_client_name):
     product_screen = Toplevel(login)
     product_screen.title(f"Produtos - {selected_client_name}")
-    product_screen.geometry(f"{form_width}x{form_height}+{int(monitor_width-form_width/2)}+{int(monitor_height-form_height/2)}")
+    product_screen.geometry(f"{form_width}x{form_height}+{int(monitor_width-form_width/2)+20}+{int(monitor_height-form_height/2)+20}")
 
     # Label com o nome do cliente
     Label(product_screen, text=f"Cliente: {selected_client_name}", font=("Helvetica", 16)).pack(pady=10)
@@ -44,6 +45,15 @@ def open_product_screen(selected_client_name):
                 client_values[selected_client_name] += added_value
             else:
                 client_values[selected_client_name] = added_value
+            
+            agora = datetime.datetime.now()
+            hora_formatada = agora.strftime("%Y-%m-%d %H:%M:%S")
+            with open("transacoes.csv", "a", newline="") as file:
+                writer = csv.writer(file)
+                if os.stat("transacoes.csv").st_size == 0:
+                    writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
+                writer.writerow([selected_client_name, "DEPOSITOU", valor, hora_formatada])
+            
             save_csv()
             valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}")
             valor_entry.delete(0, END)
@@ -58,6 +68,16 @@ def open_product_screen(selected_client_name):
             return
 
         client_values[selected_client_name] -= valor
+
+        agora = datetime.datetime.now()
+        hora_formatada = agora.strftime("%Y-%m-%d %H:%M:%S")
+
+        with open("transacoes.csv", "a", newline="") as file:
+            writer = csv.writer(file)
+            if os.stat("transacoes.csv").st_size == 0:
+                writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
+            writer.writerow([selected_client_name, produto, valor, hora_formatada])
+
         save_csv()
         valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}") # Atualiza o label primeiro
 
@@ -65,11 +85,11 @@ def open_product_screen(selected_client_name):
     input_frame = Frame(product_screen)
     input_frame.pack(pady=10)
 
-    Label(input_frame, text="Valor a adicionar:").pack(side=LEFT)
+    Label(input_frame, text="Valor para depositar:").pack(side=LEFT)
     valor_entry = Entry(input_frame)
     valor_entry.pack(side=LEFT, padx=5)
 
-    add_value_button = Button(input_frame, text="Adicionar", command=add_value)
+    add_value_button = Button(input_frame, text="Depositar", command=add_value)
     add_value_button.pack(side=LEFT)
 
     # Label para exibir o valor total do cliente
