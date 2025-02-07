@@ -10,8 +10,15 @@ monitor_height = login.winfo_screenheight()/2
 form_width = 500
 form_height = 500
 
-names = ["João Silva", "João", "Maria Souza", "Pedro Alves", "Ana Oliveira", "José Santos",
-     "Paulo Costa", "Marcos Pereira", "Lucas Rodrigues", "Rafael Almeida", "Bruno Gomes"]
+
+def get_names():
+    names = []
+    with open("names.csv", "r", encoding='UTF-8') as file:
+        for name in file:
+            names.append(name)
+    return names
+
+names = get_names()
 
 products = {
     "Produto A": 10.0,
@@ -124,6 +131,52 @@ def select_name(event):
     if selected_name and selected_name != "Nenhum nome encontrado.":
         open_product_screen(selected_name)
 
+def add_person():
+    add_person_screen = Toplevel(login)
+    add_person_screen.title("Adicionar Pessoa")
+    add_person_screen.geometry("400x75")  # Aumentei um pouco a altura para acomodar os elementos
+
+    name_label = Label(add_person_screen, text="Nome:")
+    name_label.grid(row=0, column=0, padx=10, sticky="w")  # Use grid para melhor organização
+
+    name_entry = Entry(add_person_screen)
+    name_entry.grid(row=1, column=0, padx=10)
+    name_entry.bind("<Return>", lambda event: add_name_to_list())
+
+    def name_exists(name):
+        try:
+            with open("names.csv", "r", encoding='utf-8') as file:  # encoding para lidar com caracteres especiais
+                reader = csv.reader(file)
+                next(reader, None)  # Pula o cabeçalho, se existir
+                for row in reader:
+                    if row and row[0].lower() == name.lower():  # Comparação sem case-sensitive
+                        return True
+        except FileNotFoundError:
+            return False
+        return False
+
+    def add_name_to_list():
+        new_name = name_entry.get()
+        if new_name and not name_exists(new_name):
+            with open("names.csv", "a", newline='\n') as file:  # Adicione newline='' para evitar quebras de linha extras no Windows
+                writer = csv.writer(file)
+                if os.stat("names.csv").st_size == 0:
+                    writer.writerow(["Nome"])
+                writer.writerow([new_name])  # Use writerow para escrever o nome como uma linha no CSV
+            global names
+            names = get_names()
+            home()
+        else:
+            if(name_exists(new_name)):
+                messagebox.showwarning("Nome Existente", "Esse nome já existe.")
+            else:
+                messagebox.showwarning("Nome Vazio", "Por favor, insira um nome.")
+
+    add_button = Button(add_person_screen, text="Adicionar", command=add_name_to_list)
+    add_button.grid(row=1, column=1, padx=10)
+
+
+
 def home():
     load_csv()
     global search_query, listbox
@@ -168,6 +221,9 @@ def home():
     exit_button = Button(login, text="Sair", bd='3', command=login.destroy)
     exit_x = form_width - exit_button.winfo_reqwidth() - 10
     exit_button.place(x=exit_x, y=form_height - exit_button.winfo_reqheight() - 10)
+
+    add_person_button = Button(login, text="Adicionar Pessoa", bd='1', command=add_person)
+    add_person_button.place(x=30, y=form_height - exit_button.winfo_reqheight()-10)
 
     login.mainloop()
 
