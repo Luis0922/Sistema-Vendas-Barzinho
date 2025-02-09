@@ -18,15 +18,18 @@ def get_names():
             names.append(name)
     return names
 
+def get_products():
+    products = {}
+    with open("products.csv", "r", encoding='UTF-8') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            if row:
+                products[row[0]] = float(row[1])
+    return products
+
 names = get_names()
 
-products = {
-    "Produto A": 10.0,
-    "Produto B": 25.0,
-    "Produto C": 15.50,
-    "Produto D": 5.0,
-    "Produto E": 30.0,
-}
+products = get_products()
 
 client_values = {}
 
@@ -59,7 +62,7 @@ def open_product_screen(selected_client_name):
                 writer = csv.writer(file)
                 if os.stat("transacoes.csv").st_size == 0:
                     writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
-                writer.writerow([selected_client_name, "DEPOSITOU", valor, hora_formatada])
+                writer.writerow([selected_client_name.strip(), "DEPOSITOU", added_value, hora_formatada])
             
             save_csv()
             valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}")
@@ -83,7 +86,7 @@ def open_product_screen(selected_client_name):
             writer = csv.writer(file)
             if os.stat("transacoes.csv").st_size == 0:
                 writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
-            writer.writerow([selected_client_name, produto, valor, hora_formatada])
+            writer.writerow([selected_client_name.strip(), produto, valor, hora_formatada])
 
         save_csv()
         valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}") # Atualiza o label primeiro
@@ -158,11 +161,11 @@ def add_person():
     def add_name_to_list():
         new_name = name_entry.get()
         if new_name and not name_exists(new_name):
-            with open("names.csv", "a", newline='\n') as file:  # Adicione newline='' para evitar quebras de linha extras no Windows
+            with open("names.csv", "a", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
                 if os.stat("names.csv").st_size == 0:
-                    writer.writerow(["Nome"])
-                writer.writerow([new_name])  # Use writerow para escrever o nome como uma linha no CSV
+                    writer.writerow(["Pessoa"])
+                writer.writerow([new_name])
             global names
             names = get_names()
             home()
