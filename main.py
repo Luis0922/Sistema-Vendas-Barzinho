@@ -43,7 +43,7 @@ def save_csv():
 
 def open_product_screen(selected_client_name):
     product_screen = Toplevel(login)
-    product_screen.title(f"Produtos - {selected_client_name}")
+    product_screen.title(f"{selected_client_name}")
     product_screen.geometry(f"{form_width}x{form_height}+{int(monitor_width-form_width/2)+20}+{int(monitor_height-form_height/2)+20}")
 
     # Label com o nome do cliente
@@ -166,21 +166,32 @@ def add_person():
         return False
 
     def add_name_to_list():
+        global names
         new_name = name_entry.get()
-        if new_name and not name_exists(new_name):
-            with open("names.csv", "a", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                if os.stat("names.csv").st_size == 0:
-                    writer.writerow(["Pessoa"])
-                writer.writerow([new_name])
-            global names
-            names = get_names()
-            home()
-        else:
-            if(name_exists(new_name)):
-                messagebox.showwarning("Nome Existente", "Esse nome já existe.")
-            else:
-                messagebox.showwarning("Nome Vazio", "Por favor, insira um nome.")
+        if not new_name:
+            messagebox.showwarning("Nome Vazio", "Por favor, insira um nome.")
+            return
+
+        new_name_normalized = unicodedata.normalize('NFD', new_name).encode('ascii', 'ignore').decode('ascii').lower().strip()
+
+        if name_exists(new_name):
+            messagebox.showwarning("Nome Existente", "Esse nome já existe.")
+            return
+
+        if any(unicodedata.normalize('NFD', name).encode('ascii', 'ignore').decode('ascii').lower().strip() == new_name_normalized for name in names):
+            messagebox.showwarning("Nome duplicado", "Este nome já existe na lista.")
+            return
+
+        # Se chegou aqui, o nome é válido
+        with open("names.csv", "a", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            if os.stat("names.csv").st_size == 0:
+                writer.writerow(["Pessoa"])
+            writer.writerow([new_name])
+
+        names = get_names()  # Certifique-se de que get_names() esteja definida e funcionando corretamente
+        home()
+        add_person_screen.destroy() # Fecha a janela após adicionar
 
     add_button = Button(add_person_screen, text="Adicionar", command=add_name_to_list)
     add_button.grid(row=1, column=1, padx=10)
