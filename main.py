@@ -3,6 +3,7 @@ from tkinter import messagebox
 import csv
 import os
 import datetime
+import unicodedata
 
 login = Tk()
 monitor_width = login.winfo_screenwidth()/2
@@ -119,7 +120,13 @@ def open_product_screen(selected_client_name):
 
 def search_names():
     search_value = search_query.get().lower()
-    filtered_names = [nome for nome in names if search_value in nome.lower()]
+    search_value = unicodedata.normalize('NFD', search_value).encode('ascii', 'ignore').decode('ascii') # Remove acentos
+
+    filtered_names = []
+    for nome in names:
+        nome_normalizado = unicodedata.normalize('NFD', nome).encode('ascii', 'ignore').decode('ascii').lower() # Remove acentos e converte para minúsculo
+        if search_value in nome_normalizado:
+            filtered_names.append(nome) # Adiciona o nome original à lista
 
     listbox.delete(0, END)  
 
