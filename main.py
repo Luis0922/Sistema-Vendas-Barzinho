@@ -51,23 +51,55 @@ def open_product_screen(selected_client_name):
 
     def add_value():
         try:
-            added_value = float(valor_entry.get())
+            added_value = float(valor_add_entry.get().replace(",", "."))
+            if added_value <= 0:
+                messagebox.showerror("Erro", "Digite um número maior que 0.")
+                return
             if selected_client_name in client_values:
                 client_values[selected_client_name] += added_value
             else:
                 client_values[selected_client_name] = added_value
             
             agora = datetime.datetime.now()
-            hora_formatada = agora.strftime("%Y-%m-%d %H:%M:%S")
+            formated_hour = agora.strftime("%Y-%m-%d %H:%M:%S")
             with open("transacoes.csv", "a", newline="") as file:
                 writer = csv.writer(file)
                 if os.stat("transacoes.csv").st_size == 0:
                     writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
-                writer.writerow([selected_client_name.strip(), "DEPOSITOU", added_value, hora_formatada])
+                writer.writerow([selected_client_name.strip(), "DEPOSITOU", added_value, formated_hour])
             
             save_csv()
             valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}")
-            valor_entry.delete(0, END)
+            valor_add_entry.delete(0, END)
+        except ValueError:
+            messagebox.showerror("Erro", "Digite um valor numérico válido.")
+
+    def sub_value():
+        try:
+            subbed_value = float(valor_sub_entry.get().replace(",", "."))
+            if subbed_value <= 0:
+                messagebox.showerror("Erro", "Digite um número maior que 0.")
+                return
+            if selected_client_name in client_values:
+                if client_values[selected_client_name] - subbed_value < 0:
+                    messagebox.showerror("Erro", f"O {selected_client_name.strip()} não pode ficar com saldo negativo.")
+                    return
+                client_values[selected_client_name] -= subbed_value
+            else:
+                messagebox.showerror("Erro", f"O cliente {selected_client_name.strip()} não tem saldo.")
+                return
+            
+            agora = datetime.datetime.now()
+            formated_hour = agora.strftime("%Y-%m-%d %H:%M:%S")
+            with open("transacoes.csv", "a", newline="") as file:
+                writer = csv.writer(file)
+                if os.stat("transacoes.csv").st_size == 0:
+                    writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
+                writer.writerow([selected_client_name.strip(), "RETIRAR", subbed_value, formated_hour])
+            
+            save_csv()
+            valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}")
+            valor_sub_entry.delete(0, END)
         except ValueError:
             messagebox.showerror("Erro", "Digite um valor numérico válido.")
 
@@ -97,9 +129,9 @@ def open_product_screen(selected_client_name):
     input_frame.pack(pady=10)
 
     Label(input_frame, text="Valor para depositar:").pack(side=LEFT)
-    valor_entry = Entry(input_frame)
-    valor_entry.pack(side=LEFT, padx=5)
-    valor_entry.bind("<Return>", lambda event: add_value())
+    valor_add_entry = Entry(input_frame)
+    valor_add_entry.pack(side=LEFT, padx=5)
+    valor_add_entry.bind("<Return>", lambda event: add_value())
 
     add_value_button = Button(input_frame, text="Depositar", command=add_value)
     add_value_button.pack(side=LEFT)
@@ -116,6 +148,17 @@ def open_product_screen(selected_client_name):
         product_button = Button(button_frame, text=f"{product_name} - R${valor:.2f}", width=20,
                             command=lambda p=product_name, v=valor: deduct_product_amount(p, v)) # Chama subtrair_produto
         product_button.pack(pady=5)
+
+    withdraw_frame = Frame(product_screen)
+    withdraw_frame.pack(pady=10)
+
+    Label(withdraw_frame, text="Valor para retirar:").pack(side=LEFT)
+    valor_sub_entry = Entry(withdraw_frame)
+    valor_sub_entry.pack(side=LEFT, padx=5)
+    valor_sub_entry.bind("<Return>", lambda event: sub_value())
+
+    sub_value_button = Button(withdraw_frame, text="Retirar", command=sub_value)
+    sub_value_button.pack(side=LEFT)
 
 
 def search_names():
@@ -201,10 +244,11 @@ def add_person():
 def home():
     load_csv()
     global search_query, listbox
-    login.title("BarBilônia")
+    login.title("Barzinho")
     login.geometry(f"{form_width}x{form_height}+{int(monitor_width-form_width/2)}+{int(monitor_height-form_height/2)}")
     login.configure(background="#fff") # Define o fundo branco
 
+    
     icon_image = PhotoImage(file='icone/barbilonia.png').subsample(2, 2)
 
     # Criar o Label para exibir o ícone (sem posicioná-lo ainda)
