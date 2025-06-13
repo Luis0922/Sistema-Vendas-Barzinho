@@ -249,7 +249,7 @@ def home():
     login.configure(background="#fff") # Define o fundo branco
 
     
-    icon_image = PhotoImage(file='icone/barbilonia.png').subsample(2, 2)
+    icon_image = PhotoImage(file='icone/barzinho.png').subsample(2, 2)
 
     # Criar o Label para exibir o ícone (sem posicioná-lo ainda)
     icon_label = Label(login, image=icon_image, background="#fff")
