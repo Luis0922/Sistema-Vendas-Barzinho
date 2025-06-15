@@ -44,7 +44,7 @@ def save_csv():
 def open_product_screen(selected_client_name):
     product_screen = Toplevel(login)
     product_screen.title(f"{selected_client_name}")
-    product_screen.geometry(f"{form_width}x{form_height}+{int(monitor_width-form_width/2)+20}+{int(monitor_height-form_height/2)+20}")
+    product_screen.geometry(f"{form_width+(int(len(products)/6)*20)}x{form_height+40}+{int(monitor_width-form_width/2)+100}+{int(monitor_height-form_height/2)-20}")
 
     # Label com o nome do cliente
     Label(product_screen, text=f"Cliente: {selected_client_name}", font=("Helvetica", 16)).pack(pady=10)
@@ -144,10 +144,18 @@ def open_product_screen(selected_client_name):
     button_frame = Frame(product_screen)
     button_frame.pack()
 
+    column = 0
+    row = 0
+    cont = 0
     for product_name, valor in products.items():
-        product_button = Button(button_frame, text=f"{product_name} - R${valor:.2f}", width=20,
+        if (cont % 6 == 0):
+            column = column + 1
+            row = 0
+        product_button = Button(button_frame, text=f"{product_name}\nR${valor:.2f}", width=10,
                             command=lambda p=product_name, v=valor: deduct_product_amount(p, v)) # Chama subtrair_produto
-        product_button.pack(pady=5)
+        product_button.grid(row=row, column=column, padx=5, pady=5)
+        row = row + 1
+        cont = cont + 1
 
     withdraw_frame = Frame(product_screen)
     withdraw_frame.pack(pady=10)
@@ -245,7 +253,7 @@ def home():
     load_csv()
     global search_query, listbox
     login.title("Barzinho")
-    login.geometry(f"{form_width}x{form_height}+{int(monitor_width-form_width/2)}+{int(monitor_height-form_height/2)}")
+    login.geometry(f"{form_width}x{form_height+20}+{int(monitor_width-form_width/2)}+{int(monitor_height-form_height/2)}")
     login.configure(background="#fff") # Define o fundo branco
 
     
@@ -285,10 +293,10 @@ def home():
 
     exit_button = Button(login, text="Sair", bd='3', command=login.destroy)
     exit_x = form_width - exit_button.winfo_reqwidth() - 10
-    exit_button.place(x=exit_x, y=form_height - exit_button.winfo_reqheight() - 10)
+    exit_button.place(x=exit_x, y=form_height - exit_button.winfo_reqheight())
 
     add_person_button = Button(login, text="Adicionar Pessoa", bd='1', command=add_person)
-    add_person_button.place(x=30, y=form_height - exit_button.winfo_reqheight()-10)
+    add_person_button.place(x=30, y=form_height - exit_button.winfo_reqheight())
 
     login.mainloop()
 
