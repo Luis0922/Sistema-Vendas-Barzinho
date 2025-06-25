@@ -147,7 +147,7 @@ def open_product_screen(selected_client_name):
     add_value_button.pack(side=LEFT)
 
     # Label para exibir o valor total do cliente
-    valor_label = Label(product_screen, text=f"Saldo: R${client_values.get(selected_client_name, 0.0):.2f}", font=("Helvetica", 14))
+    valor_label = Label(product_screen, text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}", font=("Helvetica", 14))
     valor_label.pack(pady=10)
 
     # Frame para organizar os botões dos produtos (desativados por enquanto)
