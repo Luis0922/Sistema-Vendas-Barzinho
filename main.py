@@ -4,6 +4,7 @@ import csv
 import os
 import datetime
 import unicodedata
+import math
 
 login = Tk()
 monitor_width = login.winfo_screenwidth()/2
@@ -30,6 +31,14 @@ def get_products():
 
 names = get_names()
 
+def init_client_data():
+    if os.path.exists("client_data.csv") == False:
+        with open("client_data.csv", "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Nome", "Valor"])  # Cabeçalho
+            for name in names:
+                writer.writerow([name.replace('"', '').strip(), 0])
+
 products = get_products()
 
 client_values = {}
@@ -37,17 +46,22 @@ client_values = {}
 def save_csv():
     with open("client_data.csv", "w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["Nome", "Valor"])  # Cabeçalho
+        writer.writerow(["Nome", "Valor"]) 
         for name, value in client_values.items():
-            writer.writerow([name, value])
+            writer.writerow([name.replace('"', '').strip(), value])
 
 def open_product_screen(selected_client_name):
     product_screen = Toplevel(login)
     product_screen.title(f"{selected_client_name}")
-    product_screen.geometry(f"{form_width+(int(len(products)/6)*20)}x{form_height+40}+{int(monitor_width-form_width/2)+100}+{int(monitor_height-form_height/2)-20}")
+    product_screen_width = form_width+(math.ceil(len(products) / 6)*100)
+    product_screen.geometry(f"{product_screen_width}x{form_height+40}+{int(monitor_width-form_width/2)-200}+{int(monitor_height-form_height/2)-20}")
 
     # Label com o nome do cliente
     Label(product_screen, text=f"Cliente: {selected_client_name}", font=("Helvetica", 16)).pack(pady=10)
+
+    exit_button = Button(product_screen, text="Voltar", bd='3', command=product_screen.destroy)
+    exit_x = product_screen_width - exit_button.winfo_reqwidth() - 10
+    exit_button.place(x=exit_x, y=10)
 
     def add_value():
         try:
@@ -106,11 +120,7 @@ def open_product_screen(selected_client_name):
     status_message_label = Label(product_screen, text="", fg="red")
     status_message_label.pack()
     def deduct_product_amount(produto, valor):
-        if selected_client_name not in client_values or client_values[selected_client_name] < valor:
-            status_message_label.config(text=f"Saldo insuficiente para {produto}", fg="red")  # Mostra mensagem na tela
-            return
-
-        client_values[selected_client_name] -= valor
+        client_values[selected_client_name] -= valor 
 
         agora = datetime.datetime.now()
         hora_formatada = agora.strftime("%Y-%m-%d %H:%M:%S")
@@ -151,7 +161,7 @@ def open_product_screen(selected_client_name):
         if (cont % 6 == 0):
             column = column + 1
             row = 0
-        product_button = Button(button_frame, text=f"{product_name}\nR${valor:.2f}", width=10,
+        product_button = Button(button_frame, text=f"{product_name}\nR${valor:.2f}", width=25,
                             command=lambda p=product_name, v=valor: deduct_product_amount(p, v)) # Chama subtrair_produto
         product_button.grid(row=row, column=column, padx=5, pady=5)
         row = row + 1
@@ -190,7 +200,7 @@ def search_names():
 def select_name(event):
     selected_name = listbox.get(listbox.curselection())
     if selected_name and selected_name != "Nenhum nome encontrado.":
-        open_product_screen(selected_name)
+        open_product_screen(selected_name.strip())
 
 def add_person():
     add_person_screen = Toplevel(login)
@@ -250,7 +260,8 @@ def add_person():
 
 
 def home():
-    load_csv()
+    init_client_data()
+    load_client_values()
     global search_query, listbox
     login.title("Barzinho")
     login.geometry(f"{form_width}x{form_height+20}+{int(monitor_width-form_width/2)}+{int(monitor_height-form_height/2)}")
@@ -300,14 +311,13 @@ def home():
 
     login.mainloop()
 
-def load_csv():
+def load_client_values():
     global client_values
     if os.path.exists("client_data.csv"):
         with open("client_data.csv", "r", newline="") as file:
             reader = csv.reader(file)
             next(reader)  # Pula o cabeçalho
             for row in reader:
-                client_values[row[0]] = float(row[1])
-
+                client_values[row[0].strip()] = float(row[1])
 if __name__ == "__main__":
     home()
