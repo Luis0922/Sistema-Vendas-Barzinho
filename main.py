@@ -248,11 +248,15 @@ def add_person():
             writer = csv.writer(file)
             if os.stat("names.csv").st_size == 0:
                 writer.writerow(["Pessoa"])
-            writer.writerow([new_name])
+            writer.writerow([new_name.replace('"', '')])
 
-        names = get_names()  # Certifique-se de que get_names() esteja definida e funcionando corretamente
-        home()
-        add_person_screen.destroy() # Fecha a janela após adicionar
+        # Adiciona o novo nome no client_data
+        client_values[new_name] = 0
+        save_csv()
+
+        names = get_names()
+        add_person_screen.destroy()
+        home()     
 
     add_button = Button(add_person_screen, text="Adicionar", command=add_name_to_list)
     add_button.grid(row=1, column=1, padx=10)
