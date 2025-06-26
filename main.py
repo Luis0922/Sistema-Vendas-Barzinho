@@ -244,11 +244,11 @@ def add_person():
             return
 
         # Se chegou aqui, o nome é válido
-        with open("names.csv", "a", newline="", encoding="utf-8") as file:
+        names.append(new_name)
+        with open("names.csv", "w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
-            if os.stat("names.csv").st_size == 0:
-                writer.writerow(["Pessoa"])
-            writer.writerow([new_name.replace('"', '')])
+            for name in names:
+                writer.writerow([name.replace('"', '').strip()])
 
         # Adiciona o novo nome no client_data
         client_values[new_name] = 0
