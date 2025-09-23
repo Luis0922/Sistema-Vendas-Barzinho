@@ -3,6 +3,7 @@ from tkinter import messagebox
 import csv
 import os
 import datetime
+from tkinter import ttk
 import unicodedata
 import math
 
@@ -12,6 +13,15 @@ monitor_height = login.winfo_screenheight()/2
 form_width = 500
 form_height = 500
 
+def get_transactions():
+    transactions = []
+    if os.path.exists("transacoes.csv"):
+        with open("transacoes.csv", "r", encoding='latin-1') as file:
+            reader = csv.reader(file)
+            next(reader)
+            for row in reader:
+                transactions.append(row)
+    return transactions
 
 def get_names():
     names = []
@@ -43,7 +53,7 @@ products = get_products()
 
 client_values = {}
 
-def save_csv():
+def save_client_data_csv():
     with open("client_data.csv", "w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["Nome", "Valor"]) 
@@ -62,6 +72,9 @@ def open_product_screen(selected_client_name):
     exit_button = Button(product_screen, text="Voltar", bd='3', command=product_screen.destroy)
     exit_x = product_screen_width - exit_button.winfo_reqwidth() - 10
     exit_button.place(x=exit_x, y=10)
+
+    historic_button = Button(product_screen, text="Historico", bd='3', command=lambda: client_historic(selected_client_name))
+    historic_button.place(x=10, y=10)
 
     def add_value():
         try:
@@ -82,7 +95,7 @@ def open_product_screen(selected_client_name):
                     writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
                 writer.writerow([selected_client_name.strip(), "DEPOSITOU", added_value, formated_hour])
             
-            save_csv()
+            save_client_data_csv()
             valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}")
             valor_add_entry.delete(0, END)
         except ValueError:
@@ -111,7 +124,7 @@ def open_product_screen(selected_client_name):
                     writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
                 writer.writerow([selected_client_name.strip(), "RETIRAR", subbed_value, formated_hour])
             
-            save_csv()
+            save_client_data_csv()
             valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}")
             valor_sub_entry.delete(0, END)
         except ValueError:
@@ -131,7 +144,7 @@ def open_product_screen(selected_client_name):
                 writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
             writer.writerow([selected_client_name.strip(), produto, valor, hora_formatada])
 
-        save_csv()
+        save_client_data_csv()
         valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}") # Atualiza o label primeiro
 
     # Frame para o botão e entrada de valor
@@ -187,7 +200,7 @@ def search_names():
     for nome in names:
         nome_normalizado = unicodedata.normalize('NFD', nome).encode('ascii', 'ignore').decode('ascii').lower() # Remove acentos e converte para minúsculo
         if search_value in nome_normalizado:
-            filtered_names.append(nome) # Adiciona o nome original à lista
+            filtered_names.append(nome)
 
     listbox.delete(0, END)  
 
@@ -205,10 +218,10 @@ def select_name(event):
 def add_person():
     add_person_screen = Toplevel(login)
     add_person_screen.title("Adicionar Pessoa")
-    add_person_screen.geometry("400x75")  # Aumentei um pouco a altura para acomodar os elementos
+    add_person_screen.geometry("400x75")
 
     name_label = Label(add_person_screen, text="Nome:")
-    name_label.grid(row=0, column=0, padx=10, sticky="w")  # Use grid para melhor organização
+    name_label.grid(row=0, column=0, padx=10, sticky="w") 
 
     name_entry = Entry(add_person_screen)
     name_entry.grid(row=1, column=0, padx=10)
@@ -216,11 +229,11 @@ def add_person():
 
     def name_exists(name):
         try:
-            with open("names.csv", "r", encoding='utf-8') as file:  # encoding para lidar com caracteres especiais
+            with open("names.csv", "r", encoding='utf-8') as file:
                 reader = csv.reader(file)
-                next(reader, None)  # Pula o cabeçalho, se existir
+                next(reader, None) 
                 for row in reader:
-                    if row and row[0].lower() == name.lower():  # Comparação sem case-sensitive
+                    if row and row[0].lower() == name.lower():
                         return True
         except FileNotFoundError:
             return False
@@ -243,16 +256,14 @@ def add_person():
             messagebox.showwarning("Nome duplicado", "Este nome já existe na lista.")
             return
 
-        # Se chegou aqui, o nome é válido
         names.append(new_name)
         with open("names.csv", "w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             for name in names:
                 writer.writerow([name.replace('"', '').strip()])
 
-        # Adiciona o novo nome no client_data
         client_values[new_name] = 0
-        save_csv()
+        save_client_data_csv()
 
         names = get_names()
         add_person_screen.destroy()
@@ -261,6 +272,120 @@ def add_person():
     add_button = Button(add_person_screen, text="Adicionar", command=add_name_to_list)
     add_button.grid(row=1, column=1, padx=10)
 
+def treeview_sort_column(tree, col, initial_sort=False):
+    global current_sort_column, sort_direction
+
+    l = [(tree.set(k, col), k) for k in tree.get_children('')]
+
+    if initial_sort:
+        if current_sort_column == col:
+            sort_direction = not sort_direction
+        else:
+            sort_direction = False
+        current_sort_column = col
+    else:
+        sort_direction = not sort_direction
+
+    if col == 'Preço':
+        l.sort(key=lambda t: float(t[0].replace('R$ ', '').replace(',', '.')), reverse=sort_direction)
+    elif col == 'Data':
+        l.sort(key=lambda t: t[0], reverse=sort_direction)
+    else:
+        l.sort(key=lambda t: t[0].lower(), reverse=sort_direction)
+
+    for index, (val, k) in enumerate(l):
+        tree.move(k, '', index)
+        tag = 'oddrow' if index % 2 == 0 else 'evenrow'
+        tree.item(k, tags=(tag,))
+
+    # Atualiza os indicadores nos cabeçalhos
+    columns = tree["columns"]
+    for c in columns:
+        original_text = c
+        if c == 'Preço': original_text = 'Preço'
+        elif c == 'Produto': original_text = 'Produto'
+        elif c == 'Data': original_text = 'Data'
+
+        if c == current_sort_column:
+            indicator = ' ▲' if not sort_direction else ' ▼'
+            tree.heading(c, text=original_text + indicator, command=lambda c=c: treeview_sort_column(tree, c, True))
+        else:
+            tree.heading(c, text=original_text + ' -', command=lambda c=c: treeview_sort_column(tree, c, True))
+
+def client_historic(selected_client_name):
+    global current_sort_column, sort_direction
+    current_sort_column = None
+    sort_direction = False
+
+    client_historic_screen = Toplevel(login)
+    client_historic_screen.title(f"Histórico de {selected_client_name}")
+    client_historic_screen.geometry("800x600")
+    client_historic_screen.resizable(True, True)
+
+    columns = ('Produto', 'Preço', 'Data')
+
+    style = ttk.Style()
+    style.theme_use("clam")
+
+    style.configure("Treeview.Heading",
+                    font=("Arial", 10, "bold"),
+                    background="#D3D3D3",
+                    foreground="black",
+                    relief="raised")
+    style.map("Treeview.Heading",
+            background=[('active', '#C0C0C0')])
+
+    style.configure("Treeview",
+                    font=("Arial", 10),
+                    rowheight=25,
+                    fieldbackground="#F0F0F0")
+    style.map("Treeview",
+            background=[('selected', '#347083')],
+            foreground=[('selected', 'white')])
+
+    tree = ttk.Treeview(client_historic_screen, columns=columns, show='headings', style="Treeview")
+
+    tree.heading('Produto', text='Produto -', anchor='w', command=lambda: treeview_sort_column(tree, 'Produto', True))
+    tree.column('Produto', width=250, anchor='w', stretch=YES)
+
+    tree.heading('Preço', text='Preço -', anchor='e', command=lambda: treeview_sort_column(tree, 'Preço', True))
+    tree.column('Preço', width=100, anchor='e', stretch=NO)
+
+    tree.heading('Data', text='Data -', anchor='center', command=lambda: treeview_sort_column(tree, 'Data', True))
+    tree.column('Data', width=180, anchor='center', stretch=NO)
+
+    scrollbar = ttk.Scrollbar(client_historic_screen, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+
+    tree.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
+    scrollbar.grid(row=0, column=1, sticky='ns', pady=10)
+
+    client_historic_screen.grid_rowconfigure(0, weight=1)
+    client_historic_screen.grid_columnconfigure(0, weight=1)
+
+    transactions = get_transactions()
+
+    index = 0
+    for i, transaction in enumerate(transactions):
+        if transaction and transaction[0].strip() == selected_client_name.strip():
+            product = transaction[1]
+            price_str = transaction[2]
+            date = transaction[3]
+
+            try:
+                price_value = float(price_str.replace(',', '.'))
+                formatted_price = f"R$ {price_value:.2f}".replace('.', ',')
+            except (ValueError, IndexError):
+                formatted_price = price_str
+
+            display_values = (product, formatted_price, date)
+
+            tag = 'oddrow' if index % 2 == 0 else 'evenrow'
+            tree.insert('', END, values=display_values, tags=(tag,))
+            index += 1
+
+    style.configure("oddrow", background="#F5F5F5")
+    style.configure("evenrow", background="white")
 
 
 def home():
@@ -269,21 +394,19 @@ def home():
     global search_query, listbox
     login.title("Barzinho")
     login.geometry(f"{form_width}x{form_height+20}+{int(monitor_width-form_width/2)}+{int(monitor_height-form_height/2)}")
-    login.configure(background="#fff") # Define o fundo branco
+    login.configure(background="#fff")
 
     
     icon_image = PhotoImage(file='icone/barzinho.png').subsample(2, 2)
 
-    # Criar o Label para exibir o ícone (sem posicioná-lo ainda)
     icon_label = Label(login, image=icon_image, background="#fff")
     icon_label.image = icon_image
 
-    # Criar o Label "Buscar:" (sem posicioná-lo ainda)
     search_label = Label(login, text="Buscar:", background="#fff", anchor=W)
 
     search_query = StringVar()
-    entry_width = 200  # Largura do campo de entrada
-    entry_x = form_width / 2 - entry_width / 2  # Centraliza a entry
+    entry_width = 200
+    entry_x = form_width / 2 - entry_width / 2
     search_entry = Entry(login, textvariable=search_query)
     search_entry.place(x=entry_x, y=form_height/5+2, width=entry_width)
     search_entry.bind("<Return>", lambda event: search_names())
@@ -320,7 +443,7 @@ def load_client_values():
     if os.path.exists("client_data.csv"):
         with open("client_data.csv", "r", newline="") as file:
             reader = csv.reader(file)
-            next(reader)  # Pula o cabeçalho
+            next(reader)
             for row in reader:
                 client_values[row[0].strip()] = float(row[1])
 if __name__ == "__main__":
