@@ -319,7 +319,7 @@ def client_historic(selected_client_name):
 
     client_historic_screen = Toplevel(login)
     client_historic_screen.title(f"Histórico de {selected_client_name}")
-    client_historic_screen.geometry("800x600")
+    client_historic_screen.geometry("800x600+20+0")
     client_historic_screen.resizable(True, True)
 
     columns = ('Produto', 'Preço', 'Data')
