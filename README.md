@@ -12,8 +12,11 @@ O sistema permite cadastrar clientes, associar valores a eles, registrar compras
 
 🚀 Funcionalidades
 	•	Cadastro de Clientes
+
 	•	Adição de novos clientes ao sistema.
+
 	•	Armazenamento automático em names.csv e client_data.csv.
+
 	•	Gerenciamento de Valores
 	•	Depósito de saldo para um cliente.
 	•	Retirada de valores.
