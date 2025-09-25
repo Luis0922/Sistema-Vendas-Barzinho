@@ -20,27 +20,27 @@ O sistema permite cadastrar clientes, associar valores a eles, registrar compras
 
 •	Retirada de valores.
 
-	•	Compra de produtos (desconto automático no saldo).
+•	Compra de produtos (desconto automático no saldo).
 
-	•	Prevenção contra saldo negativo.
+•	Prevenção contra saldo negativo.
 
-	•	Histórico de Transações
+•	Histórico de Transações
 
-	•	Registro automático de todas as movimentações em transacoes.csv (inclui hora e tipo da operação).
+•	Registro automático de todas as movimentações em transacoes.csv (inclui hora e tipo da operação).
 
-	•	Busca de Clientes
+•	Busca de Clientes
 
-	•	Pesquisa por nomes (com suporte a nomes com acentos).
+•	Pesquisa por nomes (com suporte a nomes com acentos).
 
-	•	Interface Gráfica (Tkinter)
+•	Interface Gráfica (Tkinter)
 
-	•	Tela inicial com lista de clientes.
+•	Tela inicial com lista de clientes.
 
-	•	Tela individual de cliente mostrando saldo e opções de depósito, retirada e produtos.
+•	Tela individual de cliente mostrando saldo e opções de depósito, retirada e produtos.
 
-	•	Botões de produtos gerados dinamicamente a partir de products.csv.
+•	Botões de produtos gerados dinamicamente a partir de products.csv.
 
-⸻
+
 
 ## 📂 Estrutura de Arquivos
 
@@ -70,7 +70,7 @@ Refrigerante,5.00
 
 •	OS / Datetime / Unicodedata → Utilitários para manipulação de arquivos, datas e acentos.
 
-⸻
+
 
 ▶️ Como Executar
 1.	Clone o repositório:
