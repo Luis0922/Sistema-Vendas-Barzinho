@@ -1,8 +1,4 @@
-# Sistema-Vendas-Barzinho
-
-Criar um exe: `pyinstaller --onefile --noconsole arquivo.py`
-
-💎 Barzinho – Sistema de Controle de Clientes e Produtos 💎
+# 💎 Barzinho – Sistema de Controle de Clientes e Produtos 💎
 
 Este projeto é uma aplicação GUI em Python (Tkinter) que gerencia clientes, produtos, depósitos, retiradas e transações em um ambiente simples, pensado para uso em uma lanchonete ou eventos similares.
 
@@ -10,16 +6,20 @@ O sistema permite cadastrar clientes, associar valores a eles, registrar compras
 
 ⸻
 
-🚀 Funcionalidades
-	•	Cadastro de Clientes
+## 🚀 Funcionalidades
 
-	•	Adição de novos clientes ao sistema.
+	- Cadastro de Clientes
+
+	- Adição de novos clientes ao sistema.
 
 	•	Armazenamento automático em names.csv e client_data.csv.
 
 	•	Gerenciamento de Valores
+
 	•	Depósito de saldo para um cliente.
+
 	•	Retirada de valores.
+
 	•	Compra de produtos (desconto automático no saldo).
 	•	Prevenção contra saldo negativo.
 	•	Histórico de Transações
@@ -80,5 +80,7 @@ cd barzinho`
 	•	Criar um painel administrativo para editar/remover produtos.
 	•	Adicionar autenticação para maior segurança.
 	•	Migrar dados para um banco de dados (SQLite ou PostgreSQL).
+
+Criar um exe: `pyinstaller --onefile --noconsole arquivo.py`
 
 
