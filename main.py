@@ -397,7 +397,7 @@ def home():
     login.configure(background="#fff")
 
     
-    icon_image = PhotoImage(file='icone/barzinho.png').subsample(2, 2)
+    icon_image = PhotoImage(file='icone/barbilonia.png').subsample(2, 2)
 
     icon_label = Label(login, image=icon_image, background="#fff")
     icon_label.image = icon_image
