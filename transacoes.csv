@@ -1,5 +1,84 @@
 Pessoa,Produto,Valor,Hora
-Maria Souza,Produto A,10.0,2025-02-06 18:37:32
-Paulo Costa,DEPOSITOU,30.0,2025-02-06 18:40:16
-Paulo Costa,Produto A,10.0,2025-02-06 18:40:42
-Maria Souza,DEPOSITOU,30.0,2025-02-06 19:38:13
+João Silva,DEPOSITOU,100.0,2025-11-01 18:30:15
+João Silva,Cerveja Skol,5.0,2025-11-01 18:32:20
+João Silva,Pastel,8.0,2025-11-01 18:35:45
+Maria Souza,DEPOSITOU,80.0,2025-11-01 19:15:30
+Maria Souza,Cerveja Heineken,8.0,2025-11-01 19:18:10
+Maria Souza,Porção Batata Frita,18.0,2025-11-01 19:25:22
+Pedro Alves,DEPOSITOU,150.0,2025-11-02 20:10:00
+Pedro Alves,Caipirinha,12.0,2025-11-02 20:12:30
+Pedro Alves,Cerveja Skol,5.0,2025-11-02 20:25:15
+Pedro Alves,Espetinho,7.0,2025-11-02 20:30:40
+Pedro Alves,Cerveja Skol,5.0,2025-11-02 20:45:22
+Ana Oliveira,DEPOSITOU,120.0,2025-11-03 18:00:00
+Ana Oliveira,Vodka Dose,10.0,2025-11-03 18:05:30
+Ana Oliveira,Refrigerante Coca-Cola,4.5,2025-11-03 18:20:15
+Ana Oliveira,Porção Coxinha,20.0,2025-11-03 18:35:50
+José Santos,DEPOSITOU,60.0,2025-11-03 21:00:10
+José Santos,Cerveja Skol,5.0,2025-11-03 21:02:45
+José Santos,Pastel,8.0,2025-11-03 21:15:20
+José Santos,RETIRAR,25.0,2025-11-03 21:45:00
+Paulo Costa,DEPOSITOU,200.0,2025-11-04 19:30:00
+Paulo Costa,Whisky Dose,15.0,2025-11-04 19:35:15
+Paulo Costa,Cerveja Heineken,8.0,2025-11-04 19:50:30
+Paulo Costa,Porção Batata Frita,18.0,2025-11-04 20:10:45
+Marcos Pereira,DEPOSITOU,90.0,2025-11-05 18:15:20
+Marcos Pereira,Caipirinha,12.0,2025-11-05 18:20:30
+Marcos Pereira,Cerveja Skol,5.0,2025-11-05 18:40:15
+Marcos Pereira,Espetinho,7.0,2025-11-05 19:00:00
+Lucas Rodrigues,DEPOSITOU,130.0,2025-11-05 20:00:00
+Lucas Rodrigues,Cerveja Heineken,8.0,2025-11-05 20:05:30
+Lucas Rodrigues,Cerveja Heineken,8.0,2025-11-05 20:25:15
+Lucas Rodrigues,Suco Natural,6.0,2025-11-05 20:40:20
+Rafael Almeida,DEPOSITOU,75.0,2025-11-06 19:10:00
+Rafael Almeida,Cerveja Skol,5.0,2025-11-06 19:12:30
+Rafael Almeida,Pastel,8.0,2025-11-06 19:30:45
+Rafael Almeida,Água Mineral,3.0,2025-11-06 19:45:10
+Bruno Gomes,DEPOSITOU,180.0,2025-11-07 18:30:00
+Bruno Gomes,Vodka Dose,10.0,2025-11-07 18:35:15
+Bruno Gomes,Porção Coxinha,20.0,2025-11-07 18:50:30
+Bruno Gomes,Cerveja Skol,5.0,2025-11-07 19:10:45
+Bruno Gomes,Espetinho,7.0,2025-11-07 19:30:20
+Carla Mendes,DEPOSITOU,95.0,2025-11-08 20:00:00
+Carla Mendes,Caipirinha,12.0,2025-11-08 20:05:15
+Carla Mendes,Refrigerante Coca-Cola,4.5,2025-11-08 20:25:30
+Carla Mendes,Porção Batata Frita,18.0,2025-11-08 20:45:00
+Fernando Lima,DEPOSITOU,110.0,2025-11-09 19:15:00
+Fernando Lima,Cerveja Heineken,8.0,2025-11-09 19:20:30
+Fernando Lima,Cerveja Heineken,8.0,2025-11-09 19:40:15
+Fernando Lima,Pastel,8.0,2025-11-09 20:00:00
+Juliana Castro,DEPOSITOU,85.0,2025-11-10 18:30:00
+Juliana Castro,Suco Natural,6.0,2025-11-10 18:35:20
+Juliana Castro,Porção Coxinha,20.0,2025-11-10 18:55:45
+Juliana Castro,Água Mineral,3.0,2025-11-10 19:15:10
+Roberto Ferreira,DEPOSITOU,160.0,2025-11-11 20:00:00
+Roberto Ferreira,Whisky Dose,15.0,2025-11-11 20:05:30
+Roberto Ferreira,Cerveja Skol,5.0,2025-11-11 20:30:15
+Roberto Ferreira,Espetinho,7.0,2025-11-11 20:50:40
+Roberto Ferreira,Cerveja Skol,5.0,2025-11-11 21:10:20
+Patrícia Rocha,DEPOSITOU,70.0,2025-11-12 19:00:00
+Patrícia Rocha,Caipirinha,12.0,2025-11-12 19:05:15
+Patrícia Rocha,Refrigerante Coca-Cola,4.5,2025-11-12 19:25:30
+Patrícia Rocha,RETIRAR,30.0,2025-11-12 19:50:00
+Gustavo Martins,DEPOSITOU,140.0,2025-11-13 18:45:00
+Gustavo Martins,Vodka Dose,10.0,2025-11-13 18:50:20
+Gustavo Martins,Porção Batata Frita,18.0,2025-11-13 19:10:35
+Gustavo Martins,Cerveja Heineken,8.0,2025-11-13 19:30:50
+Camila Barros,DEPOSITOU,105.0,2025-11-14 20:15:00
+Camila Barros,Cerveja Skol,5.0,2025-11-14 20:20:15
+Camila Barros,Pastel,8.0,2025-11-14 20:40:30
+Camila Barros,Espetinho,7.0,2025-11-14 21:00:45
+João Silva,Cerveja Skol,5.0,2025-11-15 19:00:00
+Maria Souza,Porção Coxinha,20.0,2025-11-15 19:30:15
+Pedro Alves,DEPOSITOU,80.0,2025-11-16 18:15:00
+Pedro Alves,Caipirinha,12.0,2025-11-16 18:20:30
+Ana Oliveira,RETIRAR,40.0,2025-11-17 20:00:00
+Paulo Costa,Cerveja Heineken,8.0,2025-11-18 19:30:15
+Lucas Rodrigues,Whisky Dose,15.0,2025-11-19 20:45:30
+teste,DEPOSITOU,100.0,2025-11-20 22:50:40
+teste,Pastel,8.0,2025-11-20 22:50:41
+teste,Porção Batata Frita,18.0,2025-11-20 22:50:41
+teste,Refrigerante Coca-Cola,4.5,2025-11-20 22:50:42
+teste,Cerveja Heineken,8.0,2025-11-20 22:50:42
+teste,Água Mineral,3.0,2025-11-20 22:50:42
+teste,Porção Batata Frita,18.0,2025-11-20 22:50:43

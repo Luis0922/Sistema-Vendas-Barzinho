@@ -6,6 +6,10 @@ import datetime
 from tkinter import ttk
 import unicodedata
 import math
+from openpyxl import Workbook
+from openpyxl.chart import BarChart, Reference
+from openpyxl.styles import Font, Alignment, PatternFill
+import traceback
 
 login = Tk()
 monitor_width = login.winfo_screenwidth()/2
@@ -13,10 +17,22 @@ monitor_height = login.winfo_screenheight()/2
 form_width = 500
 form_height = 500
 
+def log_error(error_message, exception=None):
+    """Registra erros em um arquivo de log"""
+    with open("error_log.txt", "a", encoding='utf-8') as log_file:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_file.write(f"\n{'='*80}\n")
+        log_file.write(f"[{timestamp}] ERRO: {error_message}\n")
+        if exception:
+            log_file.write(f"Tipo: {type(exception).__name__}\n")
+            log_file.write(f"Mensagem: {str(exception)}\n")
+            log_file.write(f"Traceback:\n{traceback.format_exc()}\n")
+        log_file.write(f"{'='*80}\n")
+
 def get_transactions():
     transactions = []
     if os.path.exists("transacoes.csv"):
-        with open("transacoes.csv", "r", encoding='latin-1') as file:
+        with open("transacoes.csv", "r", encoding='utf-8') as file:
             reader = csv.reader(file)
             next(reader)
             for row in reader:
@@ -89,7 +105,7 @@ def open_product_screen(selected_client_name):
             
             agora = datetime.datetime.now()
             formated_hour = agora.strftime("%Y-%m-%d %H:%M:%S")
-            with open("transacoes.csv", "a", newline="") as file:
+            with open("transacoes.csv", "a", newline="", encoding='utf-8') as file:
                 writer = csv.writer(file)
                 if os.stat("transacoes.csv").st_size == 0:
                     writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
@@ -118,7 +134,7 @@ def open_product_screen(selected_client_name):
             
             agora = datetime.datetime.now()
             formated_hour = agora.strftime("%Y-%m-%d %H:%M:%S")
-            with open("transacoes.csv", "a", newline="") as file:
+            with open("transacoes.csv", "a", newline="", encoding='utf-8') as file:
                 writer = csv.writer(file)
                 if os.stat("transacoes.csv").st_size == 0:
                     writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
@@ -138,7 +154,7 @@ def open_product_screen(selected_client_name):
         agora = datetime.datetime.now()
         hora_formatada = agora.strftime("%Y-%m-%d %H:%M:%S")
 
-        with open("transacoes.csv", "a", newline="") as file:
+        with open("transacoes.csv", "a", newline="", encoding='utf-8') as file:
             writer = csv.writer(file)
             if os.stat("transacoes.csv").st_size == 0:
                 writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
@@ -388,6 +404,317 @@ def client_historic(selected_client_name):
     style.configure("evenrow", background="white")
 
 
+def gerar_relatorio():
+    try:
+        # Criar um novo workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Relatório Geral"
+        
+        # Ler todas as transações
+        transactions = get_transactions()
+        
+        # Dicionários e variáveis para análise
+        produtos_vendidos = {}
+        produtos_valor_total = {}
+        clientes_gastos = {}
+        clientes_depositos = {}
+        clientes_retiradas = {}
+        total_depositado = 0.0
+        total_retirado = 0.0
+        total_vendas = 0.0
+        
+        # Processar transações
+        for transaction in transactions:
+            if len(transaction) >= 4:
+                cliente = transaction[0].strip()
+                produto = transaction[1].strip()
+                try:
+                    valor = float(transaction[2].replace(',', '.'))
+                except ValueError:
+                    continue
+                
+                if produto == "DEPOSITOU":
+                    total_depositado += valor
+                    clientes_depositos[cliente] = clientes_depositos.get(cliente, 0.0) + valor
+                elif produto == "RETIRAR":
+                    total_retirado += valor
+                    clientes_retiradas[cliente] = clientes_retiradas.get(cliente, 0.0) + valor
+                else:
+                    # É um produto vendido
+                    total_vendas += valor
+                    produtos_vendidos[produto] = produtos_vendidos.get(produto, 0) + 1
+                    produtos_valor_total[produto] = produtos_valor_total.get(produto, 0.0) + valor
+                    clientes_gastos[cliente] = clientes_gastos.get(cliente, 0.0) + valor
+        
+        # ===== CABEÇALHO DO RELATÓRIO =====
+        ws['A1'] = "RELATÓRIO DO BARZINHO"
+        ws['A1'].font = Font(size=16, bold=True)
+        ws['A1'].fill = PatternFill(start_color="203864", end_color="203864", fill_type="solid")
+        ws['A1'].font = Font(size=16, bold=True, color="FFFFFF")
+        ws.merge_cells('A1:D1')
+        ws['A1'].alignment = Alignment(horizontal='center')
+        
+        data_relatorio = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        ws['A2'] = f"Data de Emissão: {data_relatorio}"
+        ws['A2'].font = Font(size=10, italic=True)
+        ws.merge_cells('A2:D2')
+        
+        # ===== SEÇÃO 1: RESUMO FINANCEIRO =====
+        current_row = 4
+        ws[f'A{current_row}'] = "RESUMO FINANCEIRO"
+        ws[f'A{current_row}'].font = Font(size=14, bold=True, color="FFFFFF")
+        ws[f'A{current_row}'].fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        ws.merge_cells(f'A{current_row}:D{current_row}')
+        ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+        
+        current_row += 2
+        ws[f'A{current_row}'] = "Categoria"
+        ws[f'B{current_row}'] = "Valor (R$)"
+        ws[f'A{current_row}'].font = Font(bold=True)
+        ws[f'B{current_row}'].font = Font(bold=True)
+        ws[f'A{current_row}'].fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+        ws[f'B{current_row}'].fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+        
+        current_row += 1
+        ws[f'A{current_row}'] = "Total Depositado"
+        ws[f'B{current_row}'] = total_depositado
+        ws[f'B{current_row}'].number_format = 'R$ #,##0.00'
+        
+        current_row += 1
+        ws[f'A{current_row}'] = "Total em Vendas"
+        ws[f'B{current_row}'] = total_vendas
+        ws[f'B{current_row}'].number_format = 'R$ #,##0.00'
+        ws[f'B{current_row}'].fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        
+        current_row += 1
+        ws[f'A{current_row}'] = "Total Retirado"
+        ws[f'B{current_row}'] = total_retirado
+        ws[f'B{current_row}'].number_format = 'R$ #,##0.00'
+        
+        current_row += 1
+        ws[f'A{current_row}'] = "Saldo Final (Depósitos + Vendas - Retiradas)"
+        ws[f'A{current_row}'].font = Font(bold=True)
+        ws[f'B{current_row}'] = total_depositado + total_vendas - total_retirado
+        ws[f'B{current_row}'].number_format = 'R$ #,##0.00'
+        ws[f'B{current_row}'].font = Font(bold=True)
+        ws[f'B{current_row}'].fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+        
+        ws.column_dimensions['A'].width = 35
+        ws.column_dimensions['B'].width = 18
+        
+        # ===== SEÇÃO 2: SALDO POR CLIENTE =====
+        current_row += 3
+        
+        ws[f'A{current_row}'] = "SALDO POR CLIENTE"
+        ws[f'A{current_row}'].font = Font(size=14, bold=True, color="FFFFFF")
+        ws[f'A{current_row}'].fill = PatternFill(start_color="C65911", end_color="C65911", fill_type="solid")
+        ws.merge_cells(f'A{current_row}:E{current_row}')
+        ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+        
+        current_row += 2
+        ws[f'A{current_row}'] = "Cliente"
+        ws[f'B{current_row}'] = "Depositou"
+        ws[f'C{current_row}'] = "Gastou"
+        ws[f'D{current_row}'] = "Retirou"
+        ws[f'E{current_row}'] = "Saldo Atual"
+        for col in ['A', 'B', 'C', 'D', 'E']:
+            ws[f'{col}{current_row}'].font = Font(bold=True)
+            ws[f'{col}{current_row}'].fill = PatternFill(start_color="FCE4D6", end_color="FCE4D6", fill_type="solid")
+        
+        ws.column_dimensions['C'].width = 18
+        ws.column_dimensions['D'].width = 18
+        ws.column_dimensions['E'].width = 18
+        
+        current_row += 1
+        saldo_start_row = current_row
+        
+        # Obter todos os clientes únicos
+        todos_clientes = set()
+        todos_clientes.update(clientes_depositos.keys())
+        todos_clientes.update(clientes_gastos.keys())
+        todos_clientes.update(clientes_retiradas.keys())
+        
+        clientes_ordenados = sorted(todos_clientes)
+        for cliente in clientes_ordenados:
+            deposito = clientes_depositos.get(cliente, 0.0)
+            gasto = clientes_gastos.get(cliente, 0.0)
+            retirada = clientes_retiradas.get(cliente, 0.0)
+            saldo = deposito - gasto - retirada
+            
+            ws[f'A{current_row}'] = cliente
+            ws[f'B{current_row}'] = deposito
+            ws[f'B{current_row}'].number_format = 'R$ #,##0.00'
+            ws[f'C{current_row}'] = gasto
+            ws[f'C{current_row}'].number_format = 'R$ #,##0.00'
+            ws[f'D{current_row}'] = retirada
+            ws[f'D{current_row}'].number_format = 'R$ #,##0.00'
+            ws[f'E{current_row}'] = saldo
+            ws[f'E{current_row}'].number_format = 'R$ #,##0.00'
+            
+            # Destacar saldos negativos em vermelho
+            if saldo < 0:
+                ws[f'E{current_row}'].font = Font(color="FF0000", bold=True)
+            
+            current_row += 1
+        
+        # ===== CRIAR ABA DE ANÁLISE DINÂMICA =====
+        ws_analise = wb.create_sheet(title="Análise Dinâmica")
+        
+        # Organizar produtos vendidos por dia para análise dinâmica
+        vendas_por_dia_analise = {}
+        for transaction in transactions:
+            if len(transaction) >= 4:
+                produto = transaction[1].strip()
+                data_hora_str = transaction[3].strip()
+                
+                if produto in ["DEPOSITOU", "RETIRAR"]:
+                    continue
+                
+                try:
+                    data_obj = datetime.datetime.strptime(data_hora_str, "%Y-%m-%d %H:%M:%S")
+                    data = data_obj.strftime("%d/%m/%Y")
+                    
+                    if data not in vendas_por_dia_analise:
+                        vendas_por_dia_analise[data] = {}
+                    
+                    if produto not in vendas_por_dia_analise[data]:
+                        vendas_por_dia_analise[data][produto] = 0
+                    
+                    vendas_por_dia_analise[data][produto] += 1
+                except:
+                    continue
+        
+        todos_produtos_vendidos_analise = set()
+        for dia_vendas in vendas_por_dia_analise.values():
+            todos_produtos_vendidos_analise.update(dia_vendas.keys())
+        
+        produtos_lista_analise = sorted(todos_produtos_vendidos_analise)
+        datas_lista_analise = sorted(vendas_por_dia_analise.keys(), key=lambda d: datetime.datetime.strptime(d, "%d/%m/%Y"))
+        
+        if vendas_por_dia_analise:
+            current_row = 1
+            ws_analise[f'A{current_row}'] = "ANÁLISE DINÂMICA DE VENDAS"
+            ws_analise[f'A{current_row}'].font = Font(size=14, bold=True, color="FFFFFF")
+            ws_analise[f'A{current_row}'].fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")
+            ws_analise.merge_cells(f'A{current_row}:C{current_row}')
+            ws_analise[f'A{current_row}'].alignment = Alignment(horizontal='center')
+            
+            current_row += 2
+            header_analise_row = current_row
+            
+            # Cabeçalhos da tabela
+            ws_analise[f'A{current_row}'] = "Data"
+            ws_analise[f'B{current_row}'] = "Produto"
+            ws_analise[f'C{current_row}'] = "Quantidade"
+            
+            for col in ['A', 'B', 'C']:
+                ws_analise[f'{col}{current_row}'].font = Font(bold=True, size=11, color="FFFFFF")
+                ws_analise[f'{col}{current_row}'].fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")
+            
+            ws_analise.column_dimensions['A'].width = 15
+            ws_analise.column_dimensions['B'].width = 25
+            ws_analise.column_dimensions['C'].width = 15
+            
+            current_row += 1
+            first_analise_row = current_row
+            
+            # Preencher dados
+            for data in datas_lista_analise:
+                for produto in produtos_lista_analise:
+                    quantidade = vendas_por_dia_analise[data].get(produto, 0)
+                    if quantidade > 0:
+                        ws_analise[f'A{current_row}'] = data
+                        ws_analise[f'B{current_row}'] = produto
+                        ws_analise[f'C{current_row}'] = quantidade
+                        
+                        # Alternar cores
+                        if current_row % 2 == 0:
+                            for col in ['A', 'B', 'C']:
+                                ws_analise[f'{col}{current_row}'].fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+                        
+                        current_row += 1
+            
+            last_analise_row = current_row - 1
+            
+            # Adicionar filtros
+            ws_analise.auto_filter.ref = f'A{header_analise_row}:C{last_analise_row}'
+            
+            # ===== CRIAR GRÁFICO DINÂMICO =====
+            chart = BarChart()
+            chart.type = "col"
+            chart.style = 11
+            chart.title = "Vendas Por Data e Produto"
+            chart.y_axis.title = 'Quantidade'
+            chart.x_axis.title = 'Produto'
+            chart.grouping = "clustered"
+            
+            # Dados do gráfico
+            data_chart = Reference(ws_analise, min_col=3, min_row=header_analise_row, max_row=last_analise_row)
+            cats = Reference(ws_analise, min_col=2, min_row=header_analise_row + 1, max_row=last_analise_row)
+            
+            chart.add_data(data_chart, titles_from_data=True)
+            chart.set_categories(cats)
+            
+            chart.height = 15
+            chart.width = 25
+            
+            # Posicionar gráfico
+            ws_analise.add_chart(chart, f'E{header_analise_row}')
+        
+        # ===== CRIAR ABA DE TRANSAÇÕES DETALHADAS =====
+        ws_trans = wb.create_sheet(title="Todas as Transações")
+        
+        # Cabeçalhos
+        ws_trans['A1'] = "Cliente"
+        ws_trans['B1'] = "Produto/Tipo"
+        ws_trans['C1'] = "Valor (R$)"
+        ws_trans['D1'] = "Data e Hora"
+        
+        for col in ['A', 'B', 'C', 'D']:
+            ws_trans[f'{col}1'].font = Font(bold=True, size=11)
+            ws_trans[f'{col}1'].fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            ws_trans[f'{col}1'].font = Font(bold=True, size=11, color="FFFFFF")
+        
+        # Ajustar largura das colunas
+        ws_trans.column_dimensions['A'].width = 25
+        ws_trans.column_dimensions['B'].width = 25
+        ws_trans.column_dimensions['C'].width = 15
+        ws_trans.column_dimensions['D'].width = 20
+        
+        # Preencher dados das transações
+        for idx, transaction in enumerate(transactions, start=2):
+            if len(transaction) >= 4:
+                ws_trans[f'A{idx}'] = transaction[0].strip()
+                ws_trans[f'B{idx}'] = transaction[1].strip()
+                try:
+                    valor = float(transaction[2].replace(',', '.'))
+                    ws_trans[f'C{idx}'] = valor
+                    ws_trans[f'C{idx}'].number_format = 'R$ #,##0.00'
+                except:
+                    ws_trans[f'C{idx}'] = transaction[2]
+                ws_trans[f'D{idx}'] = transaction[3].strip()
+                
+                # Alternar cores das linhas
+                if idx % 2 == 0:
+                    for col in ['A', 'B', 'C', 'D']:
+                        ws_trans[f'{col}{idx}'].fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+        
+        # Adicionar filtro automático na tabela de transações
+        if len(transactions) > 0:
+            ws_trans.auto_filter.ref = f'A1:D{len(transactions) + 1}'
+        
+        # Salvar arquivo
+        filename = "relatorio do barzinho.xlsx"
+        wb.save(filename)
+        
+        messagebox.showinfo("Sucesso", f"Relatório gerado com sucesso!\nArquivo: {filename}")
+        
+    except Exception as e:
+        log_error("Erro ao gerar relatório", e)
+        messagebox.showerror("Erro", "Não foi possível gerar o relatório.\nVerifique o arquivo error_log.txt para mais detalhes.")
+
+
 def home():
     init_client_data()
     load_client_values()
@@ -396,6 +723,9 @@ def home():
     login.geometry(f"{form_width}x{form_height+20}+{int(monitor_width-form_width/2)}+{int(monitor_height-form_height/2)}")
     login.configure(background="#fff")
 
+    # Botão Emitir Relatório no canto superior esquerdo
+    emitir_relatorio_button = Button(login, text="Emitir Relatório", bd='3', command=gerar_relatorio)
+    emitir_relatorio_button.place(x=10, y=10)
     
     icon_image = PhotoImage(file='icone/barbilonia.png').subsample(2, 2)
 
