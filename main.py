@@ -112,7 +112,11 @@ def open_product_screen(selected_client_name):
                 writer.writerow([selected_client_name.strip(), "DEPOSITOU", added_value, formated_hour])
             
             save_client_data_csv()
-            valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}")
+            saldo = client_values.get(selected_client_name, 0.0)
+            if saldo < 0:
+                valor_label.config(text=f"Valor total: R${saldo:.2f}", fg="red")
+            else:
+                valor_label.config(text=f"Valor total: R${saldo:.2f}", fg="black")
             valor_add_entry.delete(0, END)
         except ValueError:
             messagebox.showerror("Erro", "Digite um valor numérico válido.")
@@ -124,13 +128,9 @@ def open_product_screen(selected_client_name):
                 messagebox.showerror("Erro", "Digite um número maior que 0.")
                 return
             if selected_client_name in client_values:
-                if client_values[selected_client_name] - subbed_value < 0:
-                    messagebox.showerror("Erro", f"O {selected_client_name.strip()} não pode ficar com saldo negativo.")
-                    return
                 client_values[selected_client_name] -= subbed_value
             else:
-                messagebox.showerror("Erro", f"O cliente {selected_client_name.strip()} não tem saldo.")
-                return
+                client_values[selected_client_name] = -subbed_value
             
             agora = datetime.datetime.now()
             formated_hour = agora.strftime("%Y-%m-%d %H:%M:%S")
@@ -141,7 +141,11 @@ def open_product_screen(selected_client_name):
                 writer.writerow([selected_client_name.strip(), "RETIRAR", subbed_value, formated_hour])
             
             save_client_data_csv()
-            valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}")
+            saldo = client_values.get(selected_client_name, 0.0)
+            if saldo < 0:
+                valor_label.config(text=f"Valor total: R${saldo:.2f}", fg="red")
+            else:
+                valor_label.config(text=f"Valor total: R${saldo:.2f}", fg="black")
             valor_sub_entry.delete(0, END)
         except ValueError:
             messagebox.showerror("Erro", "Digite um valor numérico válido.")
@@ -149,6 +153,8 @@ def open_product_screen(selected_client_name):
     status_message_label = Label(product_screen, text="", fg="red")
     status_message_label.pack()
     def deduct_product_amount(produto, valor):
+        if selected_client_name not in client_values:
+            client_values[selected_client_name] = 0
         client_values[selected_client_name] -= valor 
 
         agora = datetime.datetime.now()
@@ -161,7 +167,11 @@ def open_product_screen(selected_client_name):
             writer.writerow([selected_client_name.strip(), produto, valor, hora_formatada])
 
         save_client_data_csv()
-        valor_label.config(text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}") # Atualiza o label primeiro
+        saldo = client_values.get(selected_client_name, 0.0)
+        if saldo < 0:
+            valor_label.config(text=f"Valor total: R${saldo:.2f}", fg="red")
+        else:
+            valor_label.config(text=f"Valor total: R${saldo:.2f}", fg="black")
 
     # Frame para o botão e entrada de valor
     input_frame = Frame(product_screen)
@@ -176,7 +186,11 @@ def open_product_screen(selected_client_name):
     add_value_button.pack(side=LEFT)
 
     # Label para exibir o valor total do cliente
-    valor_label = Label(product_screen, text=f"Valor total: R${client_values.get(selected_client_name, 0.0):.2f}", font=("Helvetica", 14))
+    saldo_inicial = client_values.get(selected_client_name, 0.0)
+    if saldo_inicial < 0:
+        valor_label = Label(product_screen, text=f"Valor total: R${saldo_inicial:.2f}", font=("Helvetica", 14), fg="red")
+    else:
+        valor_label = Label(product_screen, text=f"Valor total: R${saldo_inicial:.2f}", font=("Helvetica", 14))
     valor_label.pack(pady=10)
 
     # Frame para organizar os botões dos produtos (desativados por enquanto)

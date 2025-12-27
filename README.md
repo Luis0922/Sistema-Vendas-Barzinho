@@ -102,6 +102,11 @@ cd Sistema-Vendas-Barzinho
 
 2. Certifique-se de que possui o Python 3 instalado.
 
+3. Entrar na venv
+```bash
+.\venv\Scripts\activate
+```
+
 3. Instale as dependências:
 
 ```bash
