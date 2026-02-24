@@ -55,6 +55,39 @@ def get_products():
                 products[row[0]] = float(row[1])
     return products
 
+def get_promotions():
+    """Carrega promoções do arquivo promotions.csv"""
+    promotions = {}
+    if os.path.exists("promotions.csv"):
+        with open("promotions.csv", "r", encoding='utf-8') as file:
+            reader = csv.reader(file)
+            next(reader, None)  # Pular cabeçalho
+            for row in reader:
+                if row and len(row) >= 6:
+                    produto = row[0]
+                    tipo = row[1]  # 'compre_leve' ou 'desconto'
+                    valor1 = row[2]  # quantidade leve OU desconto
+                    valor2 = row[3]  # quantidade pague (ou vazio para desconto)
+                    data_inicio = row[4]  # Data de início (YYYY-MM-DD)
+                    data_fim = row[5]  # Data de fim (YYYY-MM-DD)
+                    promotions[produto] = {
+                        'tipo': tipo,
+                        'valor1': valor1,
+                        'valor2': valor2,
+                        'data_inicio': data_inicio,
+                        'data_fim': data_fim
+                    }
+    return promotions
+
+def save_promotions(promotions):
+    """Salva promoções no arquivo promotions.csv"""
+    with open("promotions.csv", "w", newline="", encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Produto", "Tipo", "Valor1", "Valor2", "DataInicio", "DataFim"])
+        for produto, promo in promotions.items():
+            writer.writerow([produto, promo['tipo'], promo['valor1'], promo['valor2'], 
+                           promo.get('data_inicio', ''), promo.get('data_fim', '')])
+
 names = get_names()
 
 def init_client_data():
@@ -152,10 +185,77 @@ def open_product_screen(selected_client_name):
 
     status_message_label = Label(product_screen, text="", fg="red")
     status_message_label.pack()
-    def deduct_product_amount(produto, valor):
+    
+    def deduct_product_amount(produto, valor_original):
         if selected_client_name not in client_values:
             client_values[selected_client_name] = 0
-        client_values[selected_client_name] -= valor 
+        
+        # Verificar se há promoção ativa para este produto
+        promotions = get_promotions()
+        valor_final = valor_original
+        mensagem_promo = ""
+        
+        if produto in promotions:
+            promo = promotions[produto]
+            
+            # Verificar se a promoção está dentro do período válido
+            hoje = datetime.datetime.now().date()
+            promo_valida = True
+            
+            if promo.get('data_inicio'):
+                try:
+                    data_inicio = datetime.datetime.strptime(promo['data_inicio'], "%Y-%m-%d").date()
+                    if hoje < data_inicio:
+                        promo_valida = False
+                except:
+                    pass
+            
+            if promo.get('data_fim'):
+                try:
+                    data_fim = datetime.datetime.strptime(promo['data_fim'], "%Y-%m-%d").date()
+                    if hoje > data_fim:
+                        promo_valida = False
+                except:
+                    pass
+            
+            if promo_valida:
+                if promo['tipo'] == 'desconto':
+                    # Aplicar desconto no preço
+                    valor_final = float(promo['valor1'])
+                    desconto = valor_original - valor_final
+                    mensagem_promo = f" (Promoção: R$ {desconto:.2f} de desconto)"
+                
+                elif promo['tipo'] == 'compre_leve':
+                    # Promoção Leve X Pague Y (ex: Leve 3 Pague 2)
+                    leve = int(promo['valor1'])  # Quantidade total que leva
+                    pague = int(promo['valor2'])  # Quantidade que paga
+                    
+                    # Contar quantas vezes comprou este produto hoje
+                    hoje_str = datetime.datetime.now().strftime("%Y-%m-%d")
+                    transactions = get_transactions()
+                    count_hoje = 0
+                    
+                    for transaction in transactions:
+                        if len(transaction) >= 4:
+                            if (transaction[0].strip() == selected_client_name.strip() and 
+                                transaction[1].strip() == produto and 
+                                transaction[3].startswith(hoje_str)):
+                                count_hoje += 1
+                    
+                    # A cada 'leve' produtos, cobra apenas 'pague'
+                    # Ex: Leve 3 Pague 2 = produtos 1 e 2 pagam, produto 3 é grátis
+                    posicao_no_ciclo = (count_hoje % leve) + 1
+                    
+                    if posicao_no_ciclo <= pague:
+                        # Cobra normalmente (ainda está dentro da quantidade que paga)
+                        valor_final = valor_original
+                        mensagem_promo = f" ({posicao_no_ciclo}/{leve} - Leve {leve} Pague {pague})"
+                    else:
+                        # Produto grátis! (já pagou os 'pague' e agora leva de graça)
+                        valor_final = 0
+                        mensagem_promo = f" (GRÁTIS! Leve {leve} Pague {pague})"
+        
+        client_values[selected_client_name] -= valor_final
 
         agora = datetime.datetime.now()
         hora_formatada = agora.strftime("%Y-%m-%d %H:%M:%S")
@@ -164,7 +264,7 @@ def open_product_screen(selected_client_name):
             writer = csv.writer(file)
             if os.stat("transacoes.csv").st_size == 0:
                 writer.writerow(["Pessoa", "Produto", "Valor", "Hora"])
-            writer.writerow([selected_client_name.strip(), produto, valor, hora_formatada])
+            writer.writerow([selected_client_name.strip(), produto, valor_final, hora_formatada])
 
         save_client_data_csv()
         saldo = client_values.get(selected_client_name, 0.0)
@@ -172,6 +272,11 @@ def open_product_screen(selected_client_name):
             valor_label.config(text=f"Valor total: R${saldo:.2f}", fg="red")
         else:
             valor_label.config(text=f"Valor total: R${saldo:.2f}", fg="black")
+        
+        # Mostrar mensagem de promoção se houver
+        if mensagem_promo:
+            status_message_label.config(text=f"{produto}{mensagem_promo}", fg="green")
+            product_screen.after(3000, lambda: status_message_label.config(text=""))
 
     # Frame para o botão e entrada de valor
     input_frame = Frame(product_screen)
@@ -193,9 +298,12 @@ def open_product_screen(selected_client_name):
         valor_label = Label(product_screen, text=f"Valor total: R${saldo_inicial:.2f}", font=("Helvetica", 14))
     valor_label.pack(pady=10)
 
-    # Frame para organizar os botões dos produtos (desativados por enquanto)
+    # Frame para organizar os botões dos produtos
     button_frame = Frame(product_screen)
     button_frame.pack()
+
+    # Carregar promoções
+    promotions = get_promotions()
 
     column = 0
     row = 0
@@ -204,8 +312,48 @@ def open_product_screen(selected_client_name):
         if (cont % 6 == 0):
             column = column + 1
             row = 0
-        product_button = Button(button_frame, text=f"{product_name}\nR${valor:.2f}", width=25,
-                            command=lambda p=product_name, v=valor: deduct_product_amount(p, v)) # Chama subtrair_produto
+        
+        # Verificar se há promoção ativa para este produto
+        button_text = f"{product_name}\nR${valor:.2f}"
+        button_bg = "SystemButtonFace"  # Cor padrão
+        
+        if product_name in promotions:
+            promo = promotions[product_name]
+            
+            # Verificar se a promoção está dentro do período válido
+            hoje = datetime.datetime.now().date()
+            promo_valida = True
+            
+            if promo.get('data_inicio'):
+                try:
+                    data_inicio = datetime.datetime.strptime(promo['data_inicio'], "%Y-%m-%d").date()
+                    if hoje < data_inicio:
+                        promo_valida = False
+                except:
+                    pass
+            
+            if promo.get('data_fim'):
+                try:
+                    data_fim = datetime.datetime.strptime(promo['data_fim'], "%Y-%m-%d").date()
+                    if hoje > data_fim:
+                        promo_valida = False
+                except:
+                    pass
+            
+            if promo_valida:
+                if promo['tipo'] == 'desconto':
+                    valor_promo = float(promo['valor1'])
+                    button_text = f"{product_name}\nDe: R${valor:.2f}\nPor: R${valor_promo:.2f}"
+                    button_bg = "#90EE90"  # Verde claro
+                
+                elif promo['tipo'] == 'compre_leve':
+                    leve = promo['valor1']
+                    pague = promo['valor2']
+                    button_text = f"{product_name}\nR${valor:.2f}\n(Leve {leve} Pague {pague})"
+                    button_bg = "#FFD700"  # Dourado
+        
+        product_button = Button(button_frame, text=button_text, width=25, bg=button_bg,
+                            command=lambda p=product_name, v=valor: deduct_product_amount(p, v))
         product_button.grid(row=row, column=column, padx=5, pady=5)
         row = row + 1
         cont = cont + 1
@@ -372,6 +520,324 @@ def add_product():
     
     add_button = Button(add_product_screen, text="Adicionar", command=add_product_to_list)
     add_button.grid(row=2, column=1, padx=10, pady=10, sticky="e")
+
+def add_promotion():
+    add_promotion_screen = Toplevel(login)
+    add_promotion_screen.title("Adicionar Promoção")
+    add_promotion_screen.geometry("450x380")
+
+    # Label e Combobox para selecionar produto
+    Label(add_promotion_screen, text="Produto:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+    
+    produto_var = StringVar()
+    products_list = list(get_products().keys())
+    produto_combo = ttk.Combobox(add_promotion_screen, textvariable=produto_var, values=products_list, state="readonly", width=27)
+    produto_combo.grid(row=0, column=1, padx=10, pady=10)
+    
+    if products_list:
+        produto_combo.current(0)
+
+    # Label e Combobox para tipo de promoção
+    Label(add_promotion_screen, text="Tipo de Promoção:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
+    
+    tipo_var = StringVar()
+    tipo_combo = ttk.Combobox(add_promotion_screen, textvariable=tipo_var, 
+                              values=["Compre X Leve Y", "Desconto no Preço"], 
+                              state="readonly", width=27)
+    tipo_combo.grid(row=1, column=1, padx=10, pady=10)
+    tipo_combo.current(0)
+
+    # Frames para diferentes tipos de promoção
+    compre_leve_frame = Frame(add_promotion_screen)
+    compre_leve_frame.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
+
+    Label(compre_leve_frame, text="Leve:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+    compre_entry = Entry(compre_leve_frame, width=10)
+    compre_entry.grid(row=0, column=1, padx=5, pady=5)
+    compre_entry.insert(0, "3")
+
+    Label(compre_leve_frame, text="Pague:").grid(row=0, column=2, padx=5, pady=5, sticky="w")
+    leve_entry = Entry(compre_leve_frame, width=10)
+    leve_entry.grid(row=0, column=3, padx=5, pady=5)
+    leve_entry.insert(0, "2")
+
+    desconto_frame = Frame(add_promotion_screen)
+    desconto_frame.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
+    desconto_frame.grid_remove()  # Ocultar inicialmente
+
+    Label(desconto_frame, text="Novo Preço (R$):").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+    desconto_entry = Entry(desconto_frame, width=15)
+    desconto_entry.grid(row=0, column=1, padx=5, pady=5)
+
+    # Função para alternar entre frames
+    def toggle_promo_type(event=None):
+        if tipo_var.get() == "Compre X Leve Y":
+            desconto_frame.grid_remove()
+            compre_leve_frame.grid()
+        else:
+            compre_leve_frame.grid_remove()
+            desconto_frame.grid()
+
+    tipo_combo.bind("<<ComboboxSelected>>", toggle_promo_type)
+
+    # Campos de data
+    data_frame = Frame(add_promotion_screen)
+    data_frame.grid(row=3, column=0, columnspan=2, padx=10, pady=10)
+    
+    Label(data_frame, text="Data Início (AAAA-MM-DD):").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+    data_inicio_entry = Entry(data_frame, width=15)
+    data_inicio_entry.grid(row=0, column=1, padx=5, pady=5)
+    data_inicio_entry.insert(0, datetime.datetime.now().strftime("%Y-%m-%d"))
+    
+    Label(data_frame, text="Data Fim (AAAA-MM-DD):").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+    data_fim_entry = Entry(data_frame, width=15)
+    data_fim_entry.grid(row=1, column=1, padx=5, pady=5)
+    # Data fim padrão: 7 dias a partir de hoje
+    data_fim_padrao = datetime.datetime.now() + datetime.timedelta(days=7)
+    data_fim_entry.insert(0, data_fim_padrao.strftime("%Y-%m-%d"))
+
+    # Label de informação
+    info_label = Label(add_promotion_screen, text="", fg="blue", font=("Helvetica", 9, "italic"))
+    info_label.grid(row=4, column=0, columnspan=2, padx=10, pady=5)
+
+    def update_info(event=None):
+        produto_selecionado = produto_var.get()
+        if produto_selecionado and produto_selecionado in products:
+            preco_original = products[produto_selecionado]
+            info_label.config(text=f"Preço original: R$ {preco_original:.2f}")
+
+    produto_combo.bind("<<ComboboxSelected>>", update_info)
+    update_info()  # Atualizar ao abrir
+
+    def add_promotion_to_list():
+        produto = produto_var.get()
+        tipo = tipo_var.get()
+        data_inicio = data_inicio_entry.get().strip()
+        data_fim = data_fim_entry.get().strip()
+        
+        if not produto:
+            messagebox.showwarning("Produto não selecionado", "Por favor, selecione um produto.")
+            return
+        
+        # Validar datas
+        if not data_inicio or not data_fim:
+            messagebox.showwarning("Datas Vazias", "Por favor, preencha as datas de início e fim.")
+            return
+        
+        try:
+            dt_inicio = datetime.datetime.strptime(data_inicio, "%Y-%m-%d").date()
+            dt_fim = datetime.datetime.strptime(data_fim, "%Y-%m-%d").date()
+            
+            if dt_fim < dt_inicio:
+                messagebox.showwarning("Datas Inválidas", "A data de fim deve ser posterior à data de início.")
+                return
+        except ValueError:
+            messagebox.showerror("Erro", "Formato de data inválido. Use AAAA-MM-DD (ex: 2026-02-24)")
+            return
+        
+        promotions = get_promotions()
+        
+        try:
+            if tipo == "Compre X Leve Y":
+                leve = int(compre_entry.get())  # Quantidade total que leva
+                pague = int(leve_entry.get())   # Quantidade que paga
+                
+                if leve <= 0 or pague <= 0:
+                    messagebox.showwarning("Valores Inválidos", "Os valores devem ser maiores que zero.")
+                    return
+                
+                if pague >= leve:
+                    messagebox.showwarning("Valores Inválidos", "A quantidade 'Pague' deve ser menor que 'Leve'.")
+                    return
+                
+                promotions[produto] = {
+                    'tipo': 'compre_leve',
+                    'valor1': str(leve),
+                    'valor2': str(pague),
+                    'data_inicio': data_inicio,
+                    'data_fim': data_fim
+                }
+                mensagem = f"Promoção adicionada: Leve {leve} Pague {pague} em {produto}\nVálida de {data_inicio} até {data_fim}"
+                
+            else:  # Desconto no Preço
+                novo_preco = float(desconto_entry.get().replace(",", "."))
+                preco_original = products[produto]
+                
+                if novo_preco <= 0:
+                    messagebox.showwarning("Preço Inválido", "O preço deve ser maior que zero.")
+                    return
+                
+                if novo_preco >= preco_original:
+                    messagebox.showwarning("Preço Inválido", "O novo preço deve ser menor que o preço original.")
+                    return
+                
+                promotions[produto] = {
+                    'tipo': 'desconto',
+                    'valor1': str(novo_preco),
+                    'valor2': '',
+                    'data_inicio': data_inicio,
+                    'data_fim': data_fim
+                }
+                mensagem = f"Promoção adicionada: {produto} de R$ {preco_original:.2f} por R$ {novo_preco:.2f}\nVálida de {data_inicio} até {data_fim}"
+            
+            save_promotions(promotions)
+            messagebox.showinfo("Sucesso", mensagem)
+            add_promotion_screen.destroy()
+            
+        except ValueError:
+            messagebox.showerror("Erro", "Digite valores numéricos válidos.")
+    
+    # Botões
+    button_frame = Frame(add_promotion_screen)
+    button_frame.grid(row=5, column=0, columnspan=2, pady=15)
+    
+    Button(button_frame, text="Adicionar", command=add_promotion_to_list, width=12).pack(side=LEFT, padx=5)
+    Button(button_frame, text="Cancelar", command=add_promotion_screen.destroy, width=12).pack(side=LEFT, padx=5)
+
+def manage_promotions():
+    manage_screen = Toplevel(login)
+    manage_screen.title("Gerenciar Promoções")
+    manage_screen.geometry("900x500")
+    manage_screen.resizable(True, True)
+
+    # Frame principal
+    main_frame = Frame(manage_screen)
+    main_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
+
+    # Label de título
+    title_label = Label(main_frame, text="Promoções Ativas", font=("Helvetica", 14, "bold"))
+    title_label.pack(pady=(0, 10))
+
+    # Frame para o Treeview
+    tree_frame = Frame(main_frame)
+    tree_frame.pack(fill=BOTH, expand=True)
+
+    # Configuração do Treeview
+    columns = ('Produto', 'Tipo', 'Detalhes', 'Início', 'Fim', 'Status')
+    tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=15)
+
+    # Definir cabeçalhos
+    tree.heading('Produto', text='Produto', anchor='w')
+    tree.heading('Tipo', text='Tipo', anchor='w')
+    tree.heading('Detalhes', text='Detalhes', anchor='w')
+    tree.heading('Início', text='Data Início', anchor='center')
+    tree.heading('Fim', text='Data Fim', anchor='center')
+    tree.heading('Status', text='Status', anchor='center')
+
+    # Definir larguras das colunas
+    tree.column('Produto', width=150, anchor='w')
+    tree.column('Tipo', width=120, anchor='w')
+    tree.column('Detalhes', width=200, anchor='w')
+    tree.column('Início', width=100, anchor='center')
+    tree.column('Fim', width=100, anchor='center')
+    tree.column('Status', width=100, anchor='center')
+
+    # Scrollbar
+    scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+
+    tree.pack(side=LEFT, fill=BOTH, expand=True)
+    scrollbar.pack(side=RIGHT, fill=Y)
+
+    # Função para carregar promoções no Treeview
+    def load_promotions():
+        # Limpar treeview
+        for item in tree.get_children():
+            tree.delete(item)
+        
+        promotions = get_promotions()
+        hoje = datetime.datetime.now().date()
+        
+        for produto, promo in promotions.items():
+            tipo = promo['tipo']
+            
+            # Formatar detalhes
+            if tipo == 'desconto':
+                valor_promo = float(promo['valor1'])
+                preco_original = products.get(produto, 0)
+                detalhes = f"De R$ {preco_original:.2f} por R$ {valor_promo:.2f}"
+                tipo_texto = "Desconto"
+            else:  # compre_leve
+                leve = promo['valor1']
+                pague = promo['valor2']
+                detalhes = f"Leve {leve} Pague {pague}"
+                tipo_texto = "Leve/Pague"
+            
+            # Formatar datas
+            data_inicio = promo.get('data_inicio', '')
+            data_fim = promo.get('data_fim', '')
+            
+            # Verificar status
+            status = "Ativa"
+            status_tag = "ativa"
+            
+            if data_inicio and data_fim:
+                try:
+                    dt_inicio = datetime.datetime.strptime(data_inicio, "%Y-%m-%d").date()
+                    dt_fim = datetime.datetime.strptime(data_fim, "%Y-%m-%d").date()
+                    
+                    if hoje < dt_inicio:
+                        status = "Futura"
+                        status_tag = "futura"
+                    elif hoje > dt_fim:
+                        status = "Expirada"
+                        status_tag = "expirada"
+                except:
+                    pass
+            
+            # Formatar datas para exibição
+            data_inicio_fmt = datetime.datetime.strptime(data_inicio, "%Y-%m-%d").strftime("%d/%m/%Y") if data_inicio else "-"
+            data_fim_fmt = datetime.datetime.strptime(data_fim, "%Y-%m-%d").strftime("%d/%m/%Y") if data_fim else "-"
+            
+            # Inserir no treeview
+            item_id = tree.insert('', 'end', values=(produto, tipo_texto, detalhes, data_inicio_fmt, data_fim_fmt, status),
+                                 tags=(status_tag,))
+        
+        # Configurar cores para os status
+        tree.tag_configure('ativa', foreground='green')
+        tree.tag_configure('expirada', foreground='red')
+        tree.tag_configure('futura', foreground='blue')
+    
+    # Função para excluir promoção selecionada
+    def delete_selected():
+        selected_items = tree.selection()
+        
+        if not selected_items:
+            messagebox.showwarning("Nenhuma seleção", "Por favor, selecione uma promoção para excluir.")
+            return
+        
+        # Confirmar exclusão
+        produtos_para_excluir = []
+        for item in selected_items:
+            values = tree.item(item)['values']
+            produtos_para_excluir.append(values[0])
+        
+        if len(produtos_para_excluir) == 1:
+            mensagem = f"Tem certeza que deseja excluir a promoção do produto '{produtos_para_excluir[0]}'?"
+        else:
+            mensagem = f"Tem certeza que deseja excluir {len(produtos_para_excluir)} promoções?"
+        
+        if messagebox.askyesno("Confirmar Exclusão", mensagem):
+            promotions = get_promotions()
+            
+            for produto in produtos_para_excluir:
+                if produto in promotions:
+                    del promotions[produto]
+            
+            save_promotions(promotions)
+            load_promotions()
+            messagebox.showinfo("Sucesso", f"{len(produtos_para_excluir)} promoção(s) excluída(s) com sucesso!")
+    
+    # Carregar promoções ao abrir
+    load_promotions()
+    
+    # Frame para botões
+    button_frame = Frame(main_frame)
+    button_frame.pack(pady=(10, 0))
+    
+    Button(button_frame, text="Excluir Selecionada", command=delete_selected, bg="#FF6B6B", fg="white", width=18).pack(side=LEFT, padx=5)
+    Button(button_frame, text="Atualizar Lista", command=load_promotions, width=15).pack(side=LEFT, padx=5)
+    Button(button_frame, text="Fechar", command=manage_screen.destroy, width=15).pack(side=LEFT, padx=5)
 
 def treeview_sort_column(tree, col, initial_sort=False):
     global current_sort_column, sort_direction
@@ -824,6 +1290,8 @@ def home():
         menu.add_separator()
         menu.add_command(label="Adicionar Pessoa", command=add_person)
         menu.add_command(label="Adicionar Produto", command=add_product)
+        menu.add_command(label="Adicionar Promoção", command=add_promotion)
+        menu.add_command(label="Gerenciar Promoções", command=manage_promotions)
         
         try:
             menu.tk_popup(menu_button.winfo_rootx(), menu_button.winfo_rooty() + menu_button.winfo_height())
