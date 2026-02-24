@@ -514,6 +514,15 @@ def gerar_relatorio():
         ws[f'B{current_row}'].font = Font(bold=True)
         ws[f'B{current_row}'].fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
         
+        # Calcular valor médio gasto pelos acampantes
+        current_row += 1
+        total_acampantes_com_gastos = len(clientes_gastos)
+        valor_medio_gasto = total_vendas / total_acampantes_com_gastos if total_acampantes_com_gastos > 0 else 0.0
+        ws[f'A{current_row}'] = "Valor Médio Gasto por Acampante"
+        ws[f'B{current_row}'] = valor_medio_gasto
+        ws[f'B{current_row}'].number_format = 'R$ #,##0.00'
+        ws[f'B{current_row}'].fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        
         ws.column_dimensions['A'].width = 35
         ws.column_dimensions['B'].width = 18
         
