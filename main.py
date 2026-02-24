@@ -241,7 +241,10 @@ def search_names():
         listbox.insert(END, "Nenhum nome encontrado.")
 
 def select_name(event):
-    selected_name = listbox.get(listbox.curselection())
+    selection = listbox.curselection()
+    if not selection:
+        return
+    selected_name = listbox.get(selection)
     if selected_name and selected_name != "Nenhum nome encontrado.":
         open_product_screen(selected_name.strip())
 
