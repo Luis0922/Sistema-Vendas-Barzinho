@@ -453,7 +453,7 @@ def add_person():
     add_button = Button(add_person_screen, text="Adicionar", command=add_name_to_list)
     add_button.grid(row=1, column=1, padx=10)
 
-def add_product():
+def add_product(parent_callback=None):
     add_product_screen = Toplevel(login)
     add_product_screen.title("Adicionar Produto")
     add_product_screen.geometry("400x120")
@@ -517,9 +517,193 @@ def add_product():
         
         messagebox.showinfo("Sucesso", f"Produto '{new_product_name}' adicionado com sucesso!")
         add_product_screen.destroy()
+        if parent_callback:
+            parent_callback()
     
     add_button = Button(add_product_screen, text="Adicionar", command=add_product_to_list)
     add_button.grid(row=2, column=1, padx=10, pady=10, sticky="e")
+
+def manage_products():
+    manage_screen = Toplevel(login)
+    manage_screen.title("Gerenciar Produtos")
+    manage_screen.geometry("700x500")
+    manage_screen.resizable(True, True)
+
+    # Frame principal
+    main_frame = Frame(manage_screen)
+    main_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
+
+    # Label de título
+    title_label = Label(main_frame, text="Produtos Cadastrados", font=("Helvetica", 14, "bold"))
+    title_label.pack(pady=(0, 10))
+
+    # Frame para o Treeview
+    tree_frame = Frame(main_frame)
+    tree_frame.pack(fill=BOTH, expand=True)
+
+    # Configuração do Treeview
+    columns = ('Produto', 'Preço')
+    tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=15)
+
+    # Definir cabeçalhos
+    tree.heading('Produto', text='Produto', anchor='w')
+    tree.heading('Preço', text='Preço (R$)', anchor='e')
+
+    # Definir larguras das colunas
+    tree.column('Produto', width=400, anchor='w')
+    tree.column('Preço', width=150, anchor='e')
+
+    # Scrollbar
+    scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+
+    tree.pack(side=LEFT, fill=BOTH, expand=True)
+    scrollbar.pack(side=RIGHT, fill=Y)
+
+    # Função para carregar produtos no Treeview
+    def load_products():
+        global products
+        # Limpar treeview
+        for item in tree.get_children():
+            tree.delete(item)
+        
+        products = get_products()
+        
+        # Ordenar produtos por nome
+        sorted_products = sorted(products.items())
+        
+        for produto, preco in sorted_products:
+            tree.insert('', 'end', values=(produto, f"R$ {preco:.2f}"))
+    
+    # Função para adicionar produto
+    def add_new_product():
+        add_product(parent_callback=load_products)
+    
+    # Função para editar produto selecionado
+    def edit_selected():
+        selected_items = tree.selection()
+        
+        if not selected_items:
+            messagebox.showwarning("Nenhuma seleção", "Por favor, selecione um produto para editar.")
+            return
+        
+        if len(selected_items) > 1:
+            messagebox.showwarning("Múltipla seleção", "Por favor, selecione apenas um produto por vez.")
+            return
+        
+        # Obter dados do produto selecionado
+        item = selected_items[0]
+        values = tree.item(item)['values']
+        old_name = values[0]
+        old_price = float(values[1].replace('R$ ', '').replace(',', '.'))
+        
+        # Criar janela de edição
+        edit_screen = Toplevel(manage_screen)
+        edit_screen.title("Editar Produto")
+        edit_screen.geometry("400x120")
+        
+        Label(edit_screen, text="Nome do Produto:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        name_entry = Entry(edit_screen)
+        name_entry.grid(row=0, column=1, padx=10, pady=5)
+        name_entry.insert(0, old_name)
+        
+        Label(edit_screen, text="Preço (R$):").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        price_entry = Entry(edit_screen)
+        price_entry.grid(row=1, column=1, padx=10, pady=5)
+        price_entry.insert(0, str(old_price))
+        
+        def save_changes():
+            global products
+            new_name = name_entry.get().strip()
+            new_price = price_entry.get().strip()
+            
+            if not new_name:
+                messagebox.showwarning("Nome Vazio", "Por favor, insira o nome do produto.")
+                return
+            
+            if not new_price:
+                messagebox.showwarning("Preço Vazio", "Por favor, insira o preço do produto.")
+                return
+            
+            try:
+                price_value = float(new_price.replace(",", "."))
+                if price_value <= 0:
+                    messagebox.showwarning("Preço Inválido", "O preço deve ser maior que zero.")
+                    return
+            except ValueError:
+                messagebox.showerror("Erro", "Digite um valor numérico válido para o preço.")
+                return
+            
+            # Verificar se o nome mudou e se o novo nome já existe
+            if new_name != old_name:
+                if new_name in products:
+                    messagebox.showwarning("Produto Existente", "Já existe um produto com esse nome.")
+                    return
+                # Remover o produto antigo
+                del products[old_name]
+            
+            # Atualizar produto
+            products[new_name] = price_value
+            
+            # Salvar no arquivo
+            with open("products.csv", "w", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file)
+                for prod_name, prod_price in products.items():
+                    writer.writerow([prod_name, prod_price])
+            
+            messagebox.showinfo("Sucesso", "Produto atualizado com sucesso!")
+            edit_screen.destroy()
+            load_products()
+        
+        price_entry.bind("<Return>", lambda event: save_changes())
+        Button(edit_screen, text="Salvar", command=save_changes).grid(row=2, column=1, padx=10, pady=10, sticky="e")
+    
+    # Função para excluir produto selecionado
+    def delete_selected():
+        global products
+        selected_items = tree.selection()
+        
+        if not selected_items:
+            messagebox.showwarning("Nenhuma seleção", "Por favor, selecione um produto para excluir.")
+            return
+        
+        # Confirmar exclusão
+        produtos_para_excluir = []
+        for item in selected_items:
+            values = tree.item(item)['values']
+            produtos_para_excluir.append(values[0])
+        
+        if len(produtos_para_excluir) == 1:
+            mensagem = f"Tem certeza que deseja excluir o produto '{produtos_para_excluir[0]}'?"
+        else:
+            mensagem = f"Tem certeza que deseja excluir {len(produtos_para_excluir)} produtos?"
+        
+        if messagebox.askyesno("Confirmar Exclusão", mensagem):
+            for produto in produtos_para_excluir:
+                if produto in products:
+                    del products[produto]
+            
+            # Salvar no arquivo
+            with open("products.csv", "w", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file)
+                for prod_name, prod_price in products.items():
+                    writer.writerow([prod_name, prod_price])
+            
+            load_products()
+            messagebox.showinfo("Sucesso", f"{len(produtos_para_excluir)} produto(s) excluído(s) com sucesso!")
+    
+    # Carregar produtos ao abrir
+    load_products()
+    
+    # Frame para botões
+    button_frame = Frame(main_frame)
+    button_frame.pack(pady=(10, 0))
+    
+    Button(button_frame, text="Adicionar Produto", command=add_new_product, bg="#4CAF50", fg="white", width=18).pack(side=LEFT, padx=5)
+    Button(button_frame, text="Editar Selecionado", command=edit_selected, bg="#2196F3", fg="white", width=18).pack(side=LEFT, padx=5)
+    Button(button_frame, text="Excluir Selecionado", command=delete_selected, bg="#FF6B6B", fg="white", width=18).pack(side=LEFT, padx=5)
+    Button(button_frame, text="Atualizar Lista", command=load_products, width=15).pack(side=LEFT, padx=5)
+    Button(button_frame, text="Fechar", command=manage_screen.destroy, width=10).pack(side=LEFT, padx=5)
 
 def add_promotion():
     add_promotion_screen = Toplevel(login)
@@ -1044,9 +1228,28 @@ def gerar_relatorio():
         ws[f'B{current_row}'].number_format = 'R$ #,##0.00'
         
         current_row += 1
-        ws[f'A{current_row}'] = "Saldo Final (Depósitos + Vendas - Retiradas)"
+        caixa_fisico = total_depositado - total_retirado
+        ws[f'A{current_row}'] = "Dinheiro em Caixa"
+        ws[f'B{current_row}'] = caixa_fisico
+        ws[f'B{current_row}'].number_format = 'R$ #,##0.00'
+        ws[f'B{current_row}'].fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        
+        current_row += 1
+        a_receber = total_vendas - caixa_fisico
+        ws[f'A{current_row}'] = "A Receber dos Clientes"
+        ws[f'B{current_row}'] = a_receber
+        ws[f'B{current_row}'].number_format = 'R$ #,##0.00'
+        if a_receber > 0:
+            ws[f'B{current_row}'].fill = PatternFill(start_color="FFF4C3", end_color="FFF4C3", fill_type="solid")
+        
+        current_row += 1
+        # Cálculo inteligente do lucro:
+        # Se depósitos > vendas: lucro = dinheiro em caixa (vendas + crédito não retirado)
+        # Se vendas > depósitos: lucro = total vendas (vendas que serão cobradas)
+        lucro_total = max(total_vendas, caixa_fisico)
+        ws[f'A{current_row}'] = "Lucro Total do Barzinho"
         ws[f'A{current_row}'].font = Font(bold=True)
-        ws[f'B{current_row}'] = total_depositado + total_vendas - total_retirado
+        ws[f'B{current_row}'] = lucro_total
         ws[f'B{current_row}'].number_format = 'R$ #,##0.00'
         ws[f'B{current_row}'].font = Font(bold=True)
         ws[f'B{current_row}'].fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
@@ -1289,7 +1492,7 @@ def home():
         menu.add_command(label="Emitir Relatório", command=gerar_relatorio)
         menu.add_separator()
         menu.add_command(label="Adicionar Pessoa", command=add_person)
-        menu.add_command(label="Adicionar Produto", command=add_product)
+        menu.add_command(label="Gerenciar Produtos", command=manage_products)
         menu.add_command(label="Adicionar Promoção", command=add_promotion)
         menu.add_command(label="Gerenciar Promoções", command=manage_promotions)
         
