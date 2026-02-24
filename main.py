@@ -302,6 +302,74 @@ def add_person():
     add_button = Button(add_person_screen, text="Adicionar", command=add_name_to_list)
     add_button.grid(row=1, column=1, padx=10)
 
+def add_product():
+    add_product_screen = Toplevel(login)
+    add_product_screen.title("Adicionar Produto")
+    add_product_screen.geometry("400x120")
+
+    name_label = Label(add_product_screen, text="Nome do Produto:")
+    name_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+    name_entry = Entry(add_product_screen)
+    name_entry.grid(row=0, column=1, padx=10, pady=5)
+
+    price_label = Label(add_product_screen, text="Preço (R$):")
+    price_label.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+
+    price_entry = Entry(add_product_screen)
+    price_entry.grid(row=1, column=1, padx=10, pady=5)
+    price_entry.bind("<Return>", lambda event: add_product_to_list())
+
+    def product_exists(product_name):
+        products = get_products()
+        product_name_normalized = unicodedata.normalize('NFD', product_name).encode('ascii', 'ignore').decode('ascii').lower().strip()
+        for prod in products.keys():
+            prod_normalized = unicodedata.normalize('NFD', prod).encode('ascii', 'ignore').decode('ascii').lower().strip()
+            if prod_normalized == product_name_normalized:
+                return True
+        return False
+
+    def add_product_to_list():
+        global products
+        new_product_name = name_entry.get().strip()
+        new_product_price = price_entry.get().strip()
+        
+        if not new_product_name:
+            messagebox.showwarning("Nome Vazio", "Por favor, insira o nome do produto.")
+            return
+        
+        if not new_product_price:
+            messagebox.showwarning("Preço Vazio", "Por favor, insira o preço do produto.")
+            return
+        
+        try:
+            price_value = float(new_product_price.replace(",", "."))
+            if price_value <= 0:
+                messagebox.showwarning("Preço Inválido", "O preço deve ser maior que zero.")
+                return
+        except ValueError:
+            messagebox.showerror("Erro", "Digite um valor numérico válido para o preço.")
+            return
+        
+        if product_exists(new_product_name):
+            messagebox.showwarning("Produto Existente", "Esse produto já existe.")
+            return
+        
+        # Adicionar o produto ao dicionário
+        products[new_product_name] = price_value
+        
+        # Salvar no arquivo products.csv
+        with open("products.csv", "w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            for prod_name, prod_price in products.items():
+                writer.writerow([prod_name, prod_price])
+        
+        messagebox.showinfo("Sucesso", f"Produto '{new_product_name}' adicionado com sucesso!")
+        add_product_screen.destroy()
+    
+    add_button = Button(add_product_screen, text="Adicionar", command=add_product_to_list)
+    add_button.grid(row=2, column=1, padx=10, pady=10, sticky="e")
+
 def treeview_sort_column(tree, col, initial_sort=False):
     global current_sort_column, sort_direction
 
@@ -746,9 +814,22 @@ def home():
     login.geometry(f"{form_width}x{form_height+20}+{int(monitor_width-form_width/2)}+{int(monitor_height-form_height/2)}")
     login.configure(background="#fff")
 
-    # Botão Emitir Relatório no canto superior esquerdo
-    emitir_relatorio_button = Button(login, text="Emitir Relatório", bd='3', command=gerar_relatorio)
-    emitir_relatorio_button.place(x=10, y=10)
+    # Função para mostrar menu dropdown
+    def show_menu():
+        menu = Menu(login, tearoff=0)
+        menu.add_command(label="Emitir Relatório", command=gerar_relatorio)
+        menu.add_separator()
+        menu.add_command(label="Adicionar Pessoa", command=add_person)
+        menu.add_command(label="Adicionar Produto", command=add_product)
+        
+        try:
+            menu.tk_popup(menu_button.winfo_rootx(), menu_button.winfo_rooty() + menu_button.winfo_height())
+        finally:
+            menu.grab_release()
+    
+    # Botão Menu no canto superior direito
+    menu_button = Button(login, text="☰ Menu", bd='3', command=show_menu, font=("Helvetica", 10))
+    menu_button.place(x=form_width - 80, y=10)
     
     icon_image = PhotoImage(file='icone/barbilonia.png').subsample(2, 2)
 
@@ -785,9 +866,6 @@ def home():
     exit_button = Button(login, text="Sair", bd='3', command=login.destroy)
     exit_x = form_width - exit_button.winfo_reqwidth() - 10
     exit_button.place(x=exit_x, y=form_height - exit_button.winfo_reqheight())
-
-    add_person_button = Button(login, text="Adicionar Pessoa", bd='1', command=add_person)
-    add_person_button.place(x=30, y=form_height - exit_button.winfo_reqheight())
 
     login.mainloop()
 
