@@ -1478,6 +1478,103 @@ def gerar_relatorio():
         messagebox.showerror("Erro", "Não foi possível gerar o relatório.\nVerifique o arquivo error_log.txt para mais detalhes.")
 
 
+def reset_application():
+    """Função para resetar o aplicativo apagando todos os CSVs"""
+    reset_window = Toplevel(login)
+    reset_window.title("Resetar Aplicativo")
+    reset_window.geometry(f"500x250+{int(monitor_width-250)}+{int(monitor_height-125)}")
+    reset_window.configure(background="#fff")
+    reset_window.resizable(False, False)
+    
+    # Título de aviso
+    warning_label = Label(reset_window, text="⚠️ ATENÇÃO ⚠️", 
+                         font=("Helvetica", 16, "bold"), 
+                         fg="red", 
+                         background="#fff")
+    warning_label.pack(pady=10)
+    
+    # Mensagem de instrução
+    instruction_label = Label(reset_window, 
+                             text="Para resetar o aplicativo e apagar todos os dados,\nescreva a frase abaixo:", 
+                             font=("Helvetica", 10), 
+                             background="#fff",
+                             justify=CENTER)
+    instruction_label.pack(pady=5)
+    
+    # Frase que deve ser digitada
+    phrase_label = Label(reset_window, 
+                        text="ESTOU CIENTE QUE IREI APAGAR TUDO", 
+                        font=("Helvetica", 10, "bold"), 
+                        fg="darkred",
+                        background="#fff")
+    phrase_label.pack(pady=5)
+    
+    # Campo de entrada
+    confirmation_entry = Entry(reset_window, width=40, font=("Helvetica", 10))
+    confirmation_entry.pack(pady=10)
+    confirmation_entry.focus()
+    
+    # Função para verificar e apagar
+    def confirm_and_delete():
+        if confirmation_entry.get().strip() == "ESTOU CIENTE QUE IREI APAGAR TUDO":
+            try:
+                # Lista de arquivos CSV para apagar
+                csv_files = ["client_data.csv", "transacoes.csv", "products.csv", 
+                            "promotions.csv", "names.csv"]
+                
+                deleted_files = []
+                for csv_file in csv_files:
+                    if os.path.exists(csv_file):
+                        os.remove(csv_file)
+                        deleted_files.append(csv_file)
+                
+                # Criar names.csv vazio
+                with open("names.csv", "w", encoding='UTF-8') as file:
+                    pass  # Cria arquivo vazio
+                
+                # Criar products.csv vazio
+                with open("products.csv", "w", encoding='UTF-8') as file:
+                    pass  # Cria arquivo vazio
+                
+                reset_window.destroy()
+                messagebox.showinfo("Sucesso", 
+                                   f"Aplicativo resetado com sucesso!\n\nArquivos apagados:\n" + 
+                                   "\n".join(deleted_files) +
+                                   "\n\nnames.csv e products.csv foram criados vazios.\n\nO aplicativo será fechado.")
+                login.destroy()
+                
+            except Exception as e:
+                log_error("Erro ao resetar aplicativo", e)
+                messagebox.showerror("Erro", f"Não foi possível resetar o aplicativo:\n{str(e)}")
+        else:
+            messagebox.showerror("Erro", "A frase digitada está incorreta!\nDigite exatamente como mostrado.")
+            confirmation_entry.delete(0, END)
+            confirmation_entry.focus()
+    
+    # Botão de apagar (vermelho)
+    delete_button = Button(reset_window, 
+                          text="APAGAR TUDO", 
+                          command=confirm_and_delete,
+                          bg="red", 
+                          fg="white", 
+                          font=("Helvetica", 12, "bold"),
+                          width=20,
+                          height=2,
+                          cursor="hand2")
+    delete_button.pack(pady=10)
+    
+    # Botão de cancelar
+    cancel_button = Button(reset_window, 
+                          text="Cancelar", 
+                          command=reset_window.destroy,
+                          font=("Helvetica", 10),
+                          width=15)
+    cancel_button.pack(pady=5)
+    
+    # Bind Enter key
+    confirmation_entry.bind("<Return>", lambda event: confirm_and_delete())
+
+
 def home():
     init_client_data()
     load_client_values()
@@ -1486,16 +1583,19 @@ def home():
     login.geometry(f"{form_width}x{form_height+20}+{int(monitor_width-form_width/2)}+{int(monitor_height-form_height/2)}")
     login.configure(background="#fff")
 
+    # Criar menu uma vez no início (otimização)
+    menu = Menu(login, tearoff=0)
+    menu.add_command(label="Emitir Relatório", command=gerar_relatorio)
+    menu.add_separator()
+    menu.add_command(label="Adicionar Pessoa", command=add_person)
+    menu.add_command(label="Gerenciar Produtos", command=manage_products)
+    menu.add_command(label="Adicionar Promoção", command=add_promotion)
+    menu.add_command(label="Gerenciar Promoções", command=manage_promotions)
+    menu.add_separator()
+    menu.add_command(label="🔄 Resetar Aplicativo", command=reset_application, foreground="red")
+
     # Função para mostrar menu dropdown
     def show_menu():
-        menu = Menu(login, tearoff=0)
-        menu.add_command(label="Emitir Relatório", command=gerar_relatorio)
-        menu.add_separator()
-        menu.add_command(label="Adicionar Pessoa", command=add_person)
-        menu.add_command(label="Gerenciar Produtos", command=manage_products)
-        menu.add_command(label="Adicionar Promoção", command=add_promotion)
-        menu.add_command(label="Gerenciar Promoções", command=manage_promotions)
-        
         try:
             menu.tk_popup(menu_button.winfo_rootx(), menu_button.winfo_rooty() + menu_button.winfo_height())
         finally:
