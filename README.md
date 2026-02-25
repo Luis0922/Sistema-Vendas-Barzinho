@@ -14,6 +14,26 @@ O sistema permite cadastrar clientes, associar valores a eles, registrar compras
 
   • Armazenamento automático em names.csv e client_data.csv.
 
+• **Gerenciamento de Produtos**
+
+  • Adicionar, editar e remover produtos.
+
+  • Definição de preços personalizados.
+
+  • Armazenamento em products.csv.
+
+• **Sistema de Promoções**
+
+  • Criação de promoções com período de validade (data início e fim).
+
+  • Dois tipos de promoção:
+    - **Desconto**: Define um preço promocional para o produto.
+    - **Leve X Pague Y**: Ex: Leve 3 Pague 2 (o 3º produto sai grátis).
+
+  • Gerenciamento completo: adicionar, visualizar e remover promoções.
+
+  • Aplicação automática durante as compras (dentro do período válido).
+
 • **Gerenciamento de Valores**
 
   • Depósito de saldo para um cliente.
@@ -22,11 +42,13 @@ O sistema permite cadastrar clientes, associar valores a eles, registrar compras
 
   • Compra de produtos (desconto automático no saldo).
 
-  • Prevenção contra saldo negativo.
+  • Indicação visual de produtos em promoção durante a compra.
 
 • **Histórico de Transações**
 
   • Registro automático de todas as movimentações em transacoes.csv (inclui hora e tipo da operação).
+
+  • Visualização de histórico por cliente.
 
 • **Busca de Clientes**
 
@@ -43,13 +65,27 @@ O sistema permite cadastrar clientes, associar valores a eles, registrar compras
   
   • Gráficos de barras para visualização de dados de vendas.
 
+• **Reset do Sistema**
+
+  • Função de reset completo que apaga todos os dados.
+
+  • Confirmação de segurança (necessário digitar frase específica).
+
+  • Recria automaticamente os arquivos names.csv e products.csv vazios.
+
+  • Interface visual com botão vermelho de destaque.
+
 • **Interface Gráfica (Tkinter)**
 
-  • Tela inicial com lista de clientes e botão "Emitir Relatório" no canto superior esquerdo.
+  • Tela inicial com lista de clientes e menu dropdown otimizado.
+
+  • Menu com acesso rápido a todas as funcionalidades.
 
   • Tela individual de cliente mostrando saldo e opções de depósito, retirada e produtos.
 
   • Botões de produtos gerados dinamicamente a partir de products.csv.
+
+  • Saldo em vermelho quando negativo para melhor visualização.
 
 
 
@@ -60,6 +96,8 @@ O sistema utiliza alguns arquivos .csv para persistência de dados:
 • **names.csv** → Lista de clientes.
 
 • **products.csv** → Lista de produtos e seus valores. (Formato: Produto,Preço)
+
+• **promotions.csv** → Promoções ativas com período de validade. (Formato: Produto,Tipo,Valor1,Valor2,DataInicio,DataFim)
 
 • **client_data.csv** → Valores atuais de cada cliente.
 
@@ -73,6 +111,13 @@ Exemplo de products.csv:
 ```
 Refrigerante,5.00
 Água,3.00
+```
+
+Exemplo de promotions.csv:
+```
+Produto,Tipo,Valor1,Valor2,DataInicio,DataFim
+Refrigerante,desconto,4.00,,2026-02-01,2026-02-28
+Cerveja,compre_leve,3,2,2026-02-15,2026-02-29
 ```
 
 ## 🛠️ Tecnologias Utilizadas
@@ -129,17 +174,53 @@ python main.py
 
   • Lista de clientes.
 
-  • Botões de busca, adicionar pessoa e sair.
+  • Botões de busca e sair.
   
-  • Botão "Emitir Relatório" no canto superior esquerdo.
+  • Menu dropdown (☰) no canto superior direito com acesso a:
+    - Emitir Relatório
+    - Adicionar Pessoa
+    - Gerenciar Produtos
+    - Adicionar Promoção
+    - Gerenciar Promoções
+    - Resetar Aplicativo (com confirmação de segurança)
 
 • **Tela do cliente:**
 
-  • Saldo atual.
+  • Saldo atual (vermelho se negativo).
 
   • Campo para depósito e retirada.
 
   • Botões para cada produto (com nome e preço).
+  
+  • Indicação visual de promoções aplicadas.
+  
+  • Botão de histórico para visualizar transações passadas.
+
+• **Gerenciamento de Produtos:**
+
+  • Interface para adicionar novos produtos com preço.
+  
+  • Editar preços de produtos existentes.
+  
+  • Remover produtos do sistema.
+
+• **Sistema de Promoções:**
+
+  • Adicionar promoções com tipo (desconto ou compre/leve).
+  
+  • Definir período de validade (datas de início e fim).
+  
+  • Visualizar e remover promoções ativas.
+
+• **Reset do Sistema:**
+
+  • Janela de confirmação com campo de texto.
+  
+  • Requer digitação da frase exata: "ESTOU CIENTE QUE IREI APAGAR TUDO".
+  
+  • Botão vermelho de destaque "APAGAR TUDO".
+  
+  • Recria arquivos essenciais automaticamente após reset.
 
 
 ## 📊 Relatórios
@@ -166,13 +247,17 @@ O sistema gera relatórios completos em Excel com as seguintes características:
 
 • Adicionar mais tipos de gráficos nos relatórios (pizza, linha).
 
-• Criar um painel administrativo para editar/remover produtos.
-
 • Adicionar autenticação para maior segurança.
 
 • Migrar dados para um banco de dados (SQLite ou PostgreSQL).
 
 • Exportar relatórios em PDF.
+
+• Sistema de backup automático dos dados.
+
+• Histórico de alterações de preços de produtos.
+
+• Relatório específico de promoções (efetividade, economia gerada).
 
 Criar um exe: 
 ```bash

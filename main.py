@@ -1605,37 +1605,54 @@ def home():
     menu_button = Button(login, text="☰ Menu", bd='3', command=show_menu, font=("Helvetica", 10))
     menu_button.place(x=form_width - 80, y=10)
     
-    icon_image = PhotoImage(file='icone/barbilonia.png').subsample(2, 2)
+    # Carregar e redimensionar ícone de forma adaptativa
+    # Usa caminho absoluto baseado no diretório do script para garantir que sempre encontre o ícone
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icone', 'icone.png')
+    icon_image_original = PhotoImage(file=icon_path)
+    # Calcular subsample baseado no tamanho da imagem para manter proporção adequada
+    max_icon_width = 120  # Largura máxima desejada para o ícone
+    max_icon_height = 80  # Altura máxima desejada para o ícone
+    
+    scale_factor = max(icon_image_original.width() // max_icon_width, 
+                      icon_image_original.height() // max_icon_height, 1)
+    
+    icon_image = icon_image_original.subsample(scale_factor, scale_factor)
 
     icon_label = Label(login, image=icon_image, background="#fff")
     icon_label.image = icon_image
+    
+    # Posicionar ícone de forma centralizada e responsiva
+    icon_x = (form_width / 2) - (icon_image.width() / 2)
+    icon_y = 30  # Distância fixa do topo
+    icon_label.place(x=icon_x, y=icon_y)
 
     search_label = Label(login, text="Buscar:", background="#fff", anchor=W)
 
     search_query = StringVar()
     entry_width = 200
     entry_x = form_width / 2 - entry_width / 2
+    
+    # Ajustar posição da busca baseado no ícone
+    search_y = icon_y + icon_image.height() + 15  # 15px abaixo do ícone
+    
     search_entry = Entry(login, textvariable=search_query)
-    search_entry.place(x=entry_x, y=form_height/5+2, width=entry_width)
+    search_entry.place(x=entry_x, y=search_y + 2, width=entry_width)
     search_entry.bind("<Return>", lambda event: search_names())
 
-    total_width = icon_label.winfo_reqwidth() + search_label.winfo_reqwidth() + entry_width + 50 + 50
-    start_x = form_width / 2 - total_width / 2
+    # Posicionar label "Buscar:" ao lado do campo
+    label_x = entry_x - 60
+    search_label.place(x=label_x, y=search_y)
+    
+    # Posicionar botão de busca
+    search_button = Button(login, text="Buscar", bd='3', command=search_names)
+    search_button.place(x=form_width/2 + entry_width/2 + 10, y=search_y)
 
-    icon_x = form_width / 2 - total_width / 2 + icon_image.width()/2 + 80
-    icon_label.place(x=icon_x, y=form_height / 5 - icon_image.height() - 5)
-
-    label_x = start_x + icon_label.winfo_reqwidth() + 50
-    search_label.place(x=label_x, y=form_height / 5)
-
+    # Posicionar listbox abaixo da área de busca
     listbox = Listbox(login, width=int(form_width/7), height=20)
-    listbox.place(x=30, y=form_height/5 + 40)
+    listbox.place(x=30, y=search_y + 40)
     for nome in names:
         listbox.insert(END, nome)
     listbox.bind("<<ListboxSelect>>", select_name)
-
-    search_button = Button(login, text="Buscar", bd='3', command=search_names)
-    search_button.place(x=form_width/2 + entry_width/2 + 10, y=form_height/5)
 
     exit_button = Button(login, text="Sair", bd='3', command=login.destroy)
     exit_x = form_width - exit_button.winfo_reqwidth() - 10
