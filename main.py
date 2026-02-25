@@ -399,14 +399,21 @@ def select_name(event):
 def add_person():
     add_person_screen = Toplevel(login)
     add_person_screen.title("Adicionar Pessoa")
-    add_person_screen.geometry("400x75")
+    add_person_screen.geometry("400x150")
 
     name_label = Label(add_person_screen, text="Nome:")
-    name_label.grid(row=0, column=0, padx=10, sticky="w") 
+    name_label.grid(row=0, column=0, padx=10, pady=5, sticky="w") 
 
-    name_entry = Entry(add_person_screen)
-    name_entry.grid(row=1, column=0, padx=10)
+    name_entry = Entry(add_person_screen, width=30)
+    name_entry.grid(row=1, column=0, padx=10, columnspan=2, sticky="w")
     name_entry.bind("<Return>", lambda event: add_name_to_list())
+    
+    phone_label = Label(add_person_screen, text="Telefone (opcional):")
+    phone_label.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    
+    phone_entry = Entry(add_person_screen, width=30)
+    phone_entry.grid(row=3, column=0, padx=10, columnspan=2, sticky="w")
+    phone_entry.bind("<Return>", lambda event: add_name_to_list())
 
     def name_exists(name):
         try:
@@ -419,13 +426,88 @@ def add_person():
         except FileNotFoundError:
             return False
         return False
+    
+    def validate_phone(phone):
+        """Valida se o telefone está no formato brasileiro correto"""
+        if not phone.strip():
+            return True  # Telefone é opcional
+        
+        # Remove caracteres não numéricos
+        phone_digits = ''.join(filter(str.isdigit, phone))
+        
+        # Telefone brasileiro deve ter 10 (fixo) ou 11 (celular) dígitos
+        if len(phone_digits) not in [10, 11]:
+            return False
+        
+        # Verifica se o DDD é válido (11 a 99)
+        if len(phone_digits) >= 2:
+            ddd = int(phone_digits[:2])
+            if ddd < 11 or ddd > 99:
+                return False
+        
+        return True
+    
+    def format_phone(phone):
+        """Formata o telefone no padrão brasileiro (XX) XXXXX-XXXX ou (XX) XXXX-XXXX"""
+        if not phone.strip():
+            return ""
+        
+        phone_digits = ''.join(filter(str.isdigit, phone))
+        
+        if len(phone_digits) == 11:
+            # Formato: (XX) XXXXX-XXXX
+            return f"({phone_digits[:2]}) {phone_digits[2:7]}-{phone_digits[7:]}"
+        elif len(phone_digits) == 10:
+            # Formato: (XX) XXXX-XXXX
+            return f"({phone_digits[:2]}) {phone_digits[2:6]}-{phone_digits[6:]}"
+        else:
+            return phone
+    
+    def save_contact(name, phone):
+        """Salva o contato no arquivo contacts.csv"""
+        if not phone.strip():
+            return
+        
+        contacts = {}
+        if os.path.exists("contacts.csv"):
+            with open("contacts.csv", "r", encoding='utf-8') as file:
+                reader = csv.reader(file)
+                next(reader, None)  # Pular cabeçalho
+                for row in reader:
+                    if row and len(row) >= 2:
+                        contacts[row[0]] = row[1]
+        
+        contacts[name] = phone.strip()
+        
+        with open("contacts.csv", "w", newline="", encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(["Nome", "Telefone"])
+            for contact_name, contact_phone in contacts.items():
+                writer.writerow([contact_name, contact_phone])
 
     def add_name_to_list():
         global names
         new_name = name_entry.get()
+        new_phone = phone_entry.get()
+        
         if not new_name:
             messagebox.showwarning("Nome Vazio", "Por favor, insira um nome.")
             return
+        
+        # Validar telefone se fornecido
+        if new_phone.strip() and not validate_phone(new_phone):
+            messagebox.showerror("Telefone Inválido", 
+                               "Por favor, insira um telefone válido.\n\n" +
+                               "Exemplos aceitos:\n" +
+                               "• (11) 99999-9999\n" +
+                               "• (11) 9999-9999\n" +
+                               "• 11999999999\n" +
+                               "• 1199999999")
+            phone_entry.focus()
+            return
+        
+        # Formatar telefone
+        formatted_phone = format_phone(new_phone)
 
         new_name_normalized = unicodedata.normalize('NFD', new_name).encode('ascii', 'ignore').decode('ascii').lower().strip()
 
@@ -445,13 +527,16 @@ def add_person():
 
         client_values[new_name] = 0
         save_client_data_csv()
+        
+        # Salvar telefone formatado se fornecido
+        save_contact(new_name, formatted_phone)
 
         names = get_names()
         add_person_screen.destroy()
         home()     
 
     add_button = Button(add_person_screen, text="Adicionar", command=add_name_to_list)
-    add_button.grid(row=1, column=1, padx=10)
+    add_button.grid(row=4, column=0, padx=10, pady=10, sticky="w")
 
 def add_product(parent_callback=None):
     add_product_screen = Toplevel(login)
@@ -1467,6 +1552,97 @@ def gerar_relatorio():
         if len(transactions) > 0:
             ws_trans.auto_filter.ref = f'A1:D{len(transactions) + 1}'
         
+        # ===== ABA 4: DEVEDORES =====
+        ws_devedores = wb.create_sheet(title="Devedores")
+        
+        # Carregar contatos (telefones)
+        contatos = {}
+        if os.path.exists("contacts.csv"):
+            with open("contacts.csv", "r", encoding='utf-8') as file:
+                reader = csv.reader(file)
+                next(reader, None)  # Pular cabeçalho
+                for row in reader:
+                    if row and len(row) >= 2:
+                        contatos[row[0].strip()] = row[1].strip()
+        
+        # Cabeçalho
+        ws_devedores['A1'] = "CLIENTES DEVEDORES"
+        ws_devedores['A1'].font = Font(size=14, bold=True, color="FFFFFF")
+        ws_devedores['A1'].fill = PatternFill(start_color="C00000", end_color="C00000", fill_type="solid")
+        ws_devedores.merge_cells('A1:C1')
+        ws_devedores['A1'].alignment = Alignment(horizontal='center')
+        
+        # Subtítulo
+        ws_devedores['A2'] = f"Relatório gerado em: {data_relatorio}"
+        ws_devedores['A2'].font = Font(size=10, italic=True)
+        ws_devedores.merge_cells('A2:C2')
+        
+        # Cabeçalhos das colunas
+        ws_devedores['A4'] = "Nome"
+        ws_devedores['B4'] = "Telefone"
+        ws_devedores['C4'] = "Valor Devendo (R$)"
+        
+        for col in ['A', 'B', 'C']:
+            ws_devedores[f'{col}4'].font = Font(bold=True, size=11)
+            ws_devedores[f'{col}4'].fill = PatternFill(start_color="F4B084", end_color="F4B084", fill_type="solid")
+        
+        # Ajustar largura das colunas
+        ws_devedores.column_dimensions['A'].width = 30
+        ws_devedores.column_dimensions['B'].width = 20
+        ws_devedores.column_dimensions['C'].width = 20
+        
+        # Preencher dados dos devedores
+        devedores = []
+        for cliente in clientes_ordenados:
+            deposito = clientes_depositos.get(cliente, 0.0)
+            gasto = clientes_gastos.get(cliente, 0.0)
+            retirada = clientes_retiradas.get(cliente, 0.0)
+            saldo = deposito - gasto - retirada
+            
+            if saldo < 0:
+                telefone = contatos.get(cliente, "Não informado")
+                devedores.append((cliente, telefone, abs(saldo)))
+        
+        # Ordenar devedores por valor (maior dívida primeiro)
+        devedores.sort(key=lambda x: x[2], reverse=True)
+        
+        idx = 5
+        total_dividas = 0.0
+        for nome, telefone, divida in devedores:
+            ws_devedores[f'A{idx}'] = nome
+            ws_devedores[f'B{idx}'] = telefone
+            ws_devedores[f'C{idx}'] = divida
+            ws_devedores[f'C{idx}'].number_format = 'R$ #,##0.00'
+            ws_devedores[f'C{idx}'].font = Font(color="C00000", bold=True)
+            
+            total_dividas += divida
+            
+            # Alternar cores das linhas
+            if idx % 2 == 0:
+                for col in ['A', 'B', 'C']:
+                    ws_devedores[f'{col}{idx}'].fill = PatternFill(start_color="FCE4D6", end_color="FCE4D6", fill_type="solid")
+            
+            idx += 1
+        
+        # Adicionar linha de total
+        if devedores:
+            idx += 1
+            ws_devedores[f'A{idx}'] = "TOTAL A RECEBER"
+            ws_devedores[f'A{idx}'].font = Font(bold=True, size=12)
+            ws_devedores.merge_cells(f'A{idx}:B{idx}')
+            ws_devedores[f'C{idx}'] = total_dividas
+            ws_devedores[f'C{idx}'].number_format = 'R$ #,##0.00'
+            ws_devedores[f'C{idx}'].font = Font(bold=True, size=12, color="FFFFFF")
+            ws_devedores[f'C{idx}'].fill = PatternFill(start_color="C00000", end_color="C00000", fill_type="solid")
+            
+            # Adicionar filtro automático
+            ws_devedores.auto_filter.ref = f'A4:C{idx-2}'
+        else:
+            # Se não houver devedores
+            ws_devedores['A5'] = "Não há clientes com saldo negativo."
+            ws_devedores['A5'].font = Font(italic=True, color="008000")
+            ws_devedores.merge_cells('A5:C5')
+        
         # Salvar arquivo
         filename = "relatorio do barzinho.xlsx"
         wb.save(filename)
@@ -1520,7 +1696,7 @@ def reset_application():
             try:
                 # Lista de arquivos CSV para apagar
                 csv_files = ["client_data.csv", "transacoes.csv", "products.csv", 
-                            "promotions.csv", "names.csv"]
+                            "promotions.csv", "names.csv", "contacts.csv"]
                 
                 deleted_files = []
                 for csv_file in csv_files:
