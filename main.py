@@ -117,6 +117,116 @@ def open_product_screen(selected_client_name):
 
     # Label com o nome do cliente
     Label(product_screen, text=f"Cliente: {selected_client_name}", font=("Helvetica", 16)).pack(pady=10)
+    
+    # Carregar telefone do cliente
+    def get_client_phone():
+        if os.path.exists("contacts.csv"):
+            with open("contacts.csv", "r", encoding='utf-8') as file:
+                reader = csv.reader(file)
+                next(reader, None)  # Pular cabeçalho
+                for row in reader:
+                    if row and len(row) >= 2 and row[0].strip() == selected_client_name:
+                        return row[1].strip()
+        return "Não informado"
+    
+    # Função para editar telefone
+    def edit_phone():
+        edit_phone_window = Toplevel(product_screen)
+        edit_phone_window.title("Editar Telefone")
+        edit_phone_window.geometry("350x120")
+        
+        Label(edit_phone_window, text="Novo Telefone:", font=("Helvetica", 10)).pack(pady=10)
+        
+        phone_entry = Entry(edit_phone_window, width=30, font=("Helvetica", 10))
+        phone_entry.pack(pady=5)
+        phone_entry.insert(0, get_client_phone() if get_client_phone() != "Não informado" else "")
+        phone_entry.focus()
+        
+        def validate_phone(phone):
+            """Valida se o telefone está no formato brasileiro correto"""
+            if not phone.strip():
+                return True  # Telefone é opcional
+            
+            phone_digits = ''.join(filter(str.isdigit, phone))
+            
+            if len(phone_digits) not in [10, 11]:
+                return False
+            
+            if len(phone_digits) >= 2:
+                ddd = int(phone_digits[:2])
+                if ddd < 11 or ddd > 99:
+                    return False
+            
+            return True
+        
+        def format_phone(phone):
+            """Formata o telefone no padrão brasileiro"""
+            if not phone.strip():
+                return ""
+            
+            phone_digits = ''.join(filter(str.isdigit, phone))
+            
+            if len(phone_digits) == 11:
+                return f"({phone_digits[:2]}) {phone_digits[2:7]}-{phone_digits[7:]}"
+            elif len(phone_digits) == 10:
+                return f"({phone_digits[:2]}) {phone_digits[2:6]}-{phone_digits[6:]}"
+            else:
+                return phone
+        
+        def save_phone():
+            new_phone = phone_entry.get()
+            
+            if new_phone.strip() and not validate_phone(new_phone):
+                messagebox.showerror("Telefone Inválido", 
+                                   "Por favor, insira um telefone válido.\n\n" +
+                                   "Exemplos aceitos:\n" +
+                                   "• (11) 99999-9999\n" +
+                                   "• (11) 9999-9999\n" +
+                                   "• 11999999999\n" +
+                                   "• 1199999999")
+                return
+            
+            formatted_phone = format_phone(new_phone)
+            
+            # Atualizar ou adicionar telefone no contacts.csv
+            contacts = {}
+            if os.path.exists("contacts.csv"):
+                with open("contacts.csv", "r", encoding='utf-8') as file:
+                    reader = csv.reader(file)
+                    next(reader, None)
+                    for row in reader:
+                        if row and len(row) >= 2:
+                            contacts[row[0].strip()] = row[1].strip()
+            
+            if formatted_phone.strip():
+                contacts[selected_client_name] = formatted_phone
+            elif selected_client_name in contacts:
+                del contacts[selected_client_name]
+            
+            with open("contacts.csv", "w", newline="", encoding='utf-8') as file:
+                writer = csv.writer(file)
+                writer.writerow(["Nome", "Telefone"])
+                for name, phone in contacts.items():
+                    writer.writerow([name, phone])
+            
+            # Atualizar label do telefone
+            phone_label.config(text=f"📞 {formatted_phone if formatted_phone else 'Não informado'}")
+            edit_phone_window.destroy()
+            messagebox.showinfo("Sucesso", "Telefone atualizado com sucesso!")
+        
+        Button(edit_phone_window, text="Salvar", command=save_phone, bg="#4CAF50", fg="white", font=("Helvetica", 10, "bold")).pack(pady=10)
+    
+    # Frame para telefone
+    phone_frame = Frame(product_screen)
+    phone_frame.pack(pady=5)
+    
+    client_phone = get_client_phone()
+    phone_label = Label(phone_frame, text=f"📞 {client_phone}", font=("Helvetica", 11), anchor="center")
+    phone_label.pack(side=LEFT, padx=5, pady=0)
+    
+    edit_phone_label = Label(phone_frame, text="📝", font=("Helvetica", 11), cursor="hand2", fg="#2196F3", anchor="center")
+    edit_phone_label.pack(side=LEFT, padx=2, pady=0)
+    edit_phone_label.bind("<Button-1>", lambda e: edit_phone())
 
     exit_button = Button(product_screen, text="Voltar", bd='3', command=product_screen.destroy)
     exit_x = product_screen_width - exit_button.winfo_reqwidth() - 10
