@@ -1,0 +1,10 @@
+build/
+names.csv
+products.csv
+client_data.csv
+transacoes.csv
+main.spec
+dist.zip
+dist/
+__pycache__/
+*.cpython-*
