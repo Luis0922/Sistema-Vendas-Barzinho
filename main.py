@@ -1,12 +1,13 @@
 from tkinter import *
 from tkinter import messagebox
+from tkinter import filedialog
 import csv
 import os
 import datetime
 from tkinter import ttk
 import unicodedata
 import math
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.chart import BarChart, Reference
 from openpyxl.styles import Font, Alignment, PatternFill
 import traceback
@@ -647,6 +648,141 @@ def add_person():
 
     add_button = Button(add_person_screen, text="Adicionar", command=add_name_to_list)
     add_button.grid(row=4, column=0, padx=10, pady=10, sticky="w")
+
+def import_names_bulk():
+    """Importa vários nomes (e telefones opcionais) de uma vez a partir de um arquivo CSV ou Excel."""
+    global names
+
+    file_path = filedialog.askopenfilename(
+        title="Selecionar arquivo de nomes",
+        filetypes=[("CSV ou Excel", "*.csv *.xlsx *.xls"), ("CSV", "*.csv"),
+                   ("Excel", "*.xlsx *.xls"), ("Todos os arquivos", "*.*")]
+    )
+    if not file_path:
+        return
+
+    imported_rows = []
+    try:
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext == ".csv":
+            with open(file_path, "r", encoding="utf-8-sig", newline="") as file:
+                rows = list(csv.reader(file))
+            if rows:
+                rows = rows[1:]  # Primeira linha é sempre cabeçalho
+            for row in rows:
+                if not row or not row[0].strip():
+                    continue
+                nome = row[0].strip()
+                telefone = row[1].strip() if len(row) > 1 else ""
+                imported_rows.append((nome, telefone))
+        elif ext in (".xlsx", ".xls"):
+            wb = load_workbook(file_path, data_only=True)
+            sheet = wb.active
+            rows = list(sheet.iter_rows(values_only=True))
+            if rows:
+                rows = rows[1:]  # Primeira linha é sempre cabeçalho
+            for row in rows:
+                if not row or row[0] is None or not str(row[0]).strip():
+                    continue
+                nome = str(row[0]).strip()
+                telefone = str(row[1]).strip() if len(row) > 1 and row[1] is not None else ""
+                imported_rows.append((nome, telefone))
+        else:
+            messagebox.showerror("Formato inválido", "Selecione um arquivo CSV ou Excel (.xlsx, .xls).")
+            return
+    except Exception as e:
+        log_error("Erro ao importar arquivo de nomes", e)
+        messagebox.showerror("Erro", f"Não foi possível ler o arquivo:\n{e}")
+        return
+
+    if not imported_rows:
+        messagebox.showwarning("Arquivo vazio", "Nenhum nome encontrado no arquivo selecionado.")
+        return
+
+    def validate_phone(phone):
+        if not phone.strip():
+            return True
+        phone_digits = ''.join(filter(str.isdigit, phone))
+        if len(phone_digits) not in [10, 11]:
+            return False
+        if len(phone_digits) >= 2:
+            ddd = int(phone_digits[:2])
+            if ddd < 11 or ddd > 99:
+                return False
+        return True
+
+    def format_phone(phone):
+        if not phone.strip():
+            return ""
+        phone_digits = ''.join(filter(str.isdigit, phone))
+        if len(phone_digits) == 11:
+            return f"({phone_digits[:2]}) {phone_digits[2:7]}-{phone_digits[7:]}"
+        elif len(phone_digits) == 10:
+            return f"({phone_digits[:2]}) {phone_digits[2:6]}-{phone_digits[6:]}"
+        else:
+            return phone
+
+    existing_normalized = {
+        unicodedata.normalize('NFD', n).encode('ascii', 'ignore').decode('ascii').lower().strip()
+        for n in names
+    }
+
+    contacts = {}
+    if os.path.exists("contacts.csv"):
+        with open("contacts.csv", "r", encoding='utf-8') as file:
+            reader = csv.reader(file)
+            next(reader, None)
+            for row in reader:
+                if row and len(row) >= 2:
+                    contacts[row[0].strip()] = row[1].strip()
+
+    added = []
+    skipped_duplicates = []
+    skipped_invalid_phone = []
+
+    for nome, telefone in imported_rows:
+        nome_normalized = unicodedata.normalize('NFD', nome).encode('ascii', 'ignore').decode('ascii').lower().strip()
+        if nome_normalized in existing_normalized:
+            skipped_duplicates.append(nome)
+            continue
+
+        if telefone and not validate_phone(telefone):
+            skipped_invalid_phone.append(nome)
+            telefone = ""
+
+        names.append(nome)
+        existing_normalized.add(nome_normalized)
+        client_values[nome] = 0
+        if telefone:
+            contacts[nome] = format_phone(telefone)
+        added.append(nome)
+
+    if added:
+        with open("names.csv", "w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            for name in names:
+                writer.writerow([name.replace('"', '').strip()])
+
+        save_client_data_csv()
+
+        with open("contacts.csv", "w", newline="", encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(["Nome", "Telefone"])
+            for contact_name, contact_phone in contacts.items():
+                writer.writerow([contact_name, contact_phone])
+
+        names = get_names()
+
+    resumo = f"{len(added)} nome(s) importado(s) com sucesso."
+    if skipped_duplicates:
+        resumo += f"\n{len(skipped_duplicates)} nome(s) ignorado(s) por já existirem."
+    if skipped_invalid_phone:
+        resumo += f"\n{len(skipped_invalid_phone)} telefone(s) inválido(s) foram ignorados (nome importado sem telefone)."
+
+    messagebox.showinfo("Importação concluída", resumo)
+
+    if added:
+        home()
 
 def add_product(parent_callback=None):
     add_product_screen = Toplevel(login)
@@ -1874,6 +2010,8 @@ def home():
     menu.add_command(label="Emitir Relatório", command=gerar_relatorio)
     menu.add_separator()
     menu.add_command(label="Adicionar Pessoa", command=add_person)
+    menu.add_command(label="Importar Nomes (CSV/Excel)", command=import_names_bulk)
+    menu.add_command(label="Adicionar Produto", command=add_product)
     menu.add_command(label="Gerenciar Produtos", command=manage_products)
     menu.add_command(label="Adicionar Promoção", command=add_promotion)
     menu.add_command(label="Gerenciar Promoções", command=manage_promotions)

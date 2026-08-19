@@ -3,6 +3,7 @@ names.csv
 products.csv
 client_data.csv
 transacoes.csv
+contacts.csv
 main.spec
 dist.zip
 dist/
